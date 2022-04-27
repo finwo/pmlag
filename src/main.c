@@ -10,6 +10,8 @@
 
 #include <linux/if_packet.h>
 
+#include "socket.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -18,34 +20,7 @@ extern "C" {
 #define ERR_NAME "pmlag"
 
 int main(int argc, char **argv) {
-
-  // Open socket
-  int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-  if (sockfd < 0) {
-    perror(ERR_NAME ": socket");
-    exit(EXIT_FAILURE);
-  }
-
-  struct sockaddr_ll sll;
-  struct ifreq ifr;
-  bzero(&sll, sizeof(sll));
-  bzero(&ifr, sizeof(ifr));
-
-  // Get interface index
-  strncpy((char *)ifr.ifr_name, INTERFACE, IFNAMSIZ);
-  if ((ioctl(sockfd, SIOCGIFINDEX, &ifr)) == -1) {
-    perror(ERR_NAME ": Error getting interface index");
-    exit(EXIT_FAILURE);
-  }
-
-  // Bind socket to interface
-  sll.sll_family   = AF_PACKET;
-  sll.sll_ifindex  = ifr.ifr_ifindex;
-  sll.sll_protocol = htons(ETH_P_ALL);
-  if((bind(sockfd, (struct sockaddr *)&sll, sizeof(sll))) == -1) {
-    perror(ERR_NAME ": Error binding raw socket to interface");
-    exit(EXIT_FAILURE);
-  }
+  int sockfd = sockraw_open(INTERFACE);
 
   // Prepare ingress buffer
   int buflen;
@@ -98,7 +73,7 @@ int main(int argc, char **argv) {
     printf("\n");
   }
 
-  return 42;
+  return 0;
 }
 
 #ifdef __cplusplus
