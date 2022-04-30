@@ -1,12 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <linux/if_ether.h>
 #include <sys/socket.h>
+
+#include <pthread.h>
+#include <semaphore.h>
+#include <signal.h>
 
 #include "argparse.h"
 #include "config.h"
@@ -26,7 +31,91 @@ static const char *const usage[] = {
   NULL
 };
 
-pmlag_configuration *config  = NULL;
+typedef struct {
+  void *next;
+  pthread_t tid;
+  pmlag_interface *iface;
+  sem_t *sem_int;
+  int sig;
+} pmlag_thread_ll;
+
+pmlag_configuration *config         = NULL;
+pmlag_configuration *config_pending = NULL;
+pmlag_thread_ll     *threads        = NULL;
+
+int counter = 0;
+pthread_mutex_t counter_lock;
+void * iface_thread(void *arg) {
+  pmlag_thread_ll *thread = (pmlag_thread_ll *)arg;
+
+
+  printf("Thread started for %s\n", thread->iface->name);
+
+  while(1) {
+    usleep(100000); // 100ms
+
+    // Handle sigint
+    if (thread->sig & SIGINT) {
+      printf("Thread for %s received SIGINT\n", thread->iface->name);
+      sem_post(thread->sem_int);
+      return NULL;
+    }
+
+  }
+  /* unsigned long i = 0; */
+  /* int local_id; */
+
+  /* pthread_mutex_lock(&counter_lock); */
+  /* counter+=1; */
+  /* local_id = counter; */
+  /* pthread_mutex_unlock(&counter_lock); */
+
+  /* printf("Job started: %d\n", local_id); */
+  /* for(i=0; i<(0xFFFFFFF);i++); */
+  /* printf("  Job %d finished\n", local_id); */
+
+  return NULL;
+}
+
+
+void update_workers() {
+
+  // Only act on config updates
+  if (!config_pending) return;
+
+  // First shutdown all active threads
+  pmlag_thread_ll *thread = threads;
+  pmlag_thread_ll *oldthread = NULL;
+  while(thread) {
+    thread->sig = SIGINT;         // Signal the thread to interrupt
+    sem_wait(thread->sem_int);    // Wait for the thread to shut down
+    sem_destroy(thread->sem_int); // Desroy the semaphore
+    free(thread->sem_int);
+    oldthread = thread;           // Free thread & move on the the next
+    thread = thread->next;
+    free(oldthread);
+  }
+  threads = NULL;
+
+  // For each interface, start a new thread
+  pmlag_interface *iface = config_pending->interfaces;
+  while(iface) {
+    thread          = calloc(1, sizeof(pmlag_thread_ll));
+    thread->next    = threads;
+    thread->iface   = iface;
+    thread->sem_int = calloc(1, sizeof(sem_t));
+    threads = thread;
+    sem_init(thread->sem_int, 0, 0);
+    thread->tid = pthread_create(&(thread->tid), NULL, iface_thread, thread);
+    iface = iface->next;
+    if (iface == config_pending->interfaces) break;
+  }
+
+  // Mark the updated config as current
+  if (config) config_free(config);
+  config = config_pending;
+  config_pending = NULL;
+}
 
 int main(int argc, const char **argv) {
   const char *config_file = "/etc/" NAME ".conf";
@@ -52,53 +141,49 @@ int main(int argc, const char **argv) {
   // Load configuration
   pmlag_configuration *loaded = config_load(config_file);
 
-  // VERY validation
+  // Basic config validation
   if (!loaded->interfaces) {
     fprintf(stderr, "No interfaces defined in config\n");
     return 1;
   }
 
-  // DEBUG: Show loaded configuration
-  fprintf(stderr, "Loaded configuration:\n");
-  pmlag_interface *iface = loaded->interfaces;
-  while(iface) {
-    fprintf(stderr, "  Interface: %s\n", iface->name);
-    fprintf(stderr, "    master   : %s\n", iface->master ? iface->master : "");
-    fprintf(stderr, "    mac      : %s\n", iface->mac    ? iface->mac    : "");
-    fprintf(stderr, "    broadcast: %s%s\n",
-      iface->broadcast == BROADCAST_FLOOD    ? "flood"    : "",
-      iface->broadcast == BROADCAST_BALANCED ? "balanced" : ""
-    );
-    fprintf(stderr, "    mode     : %s%s%s%s\n",
-      iface->mode == MODE_SLAVE         ? "slave"         : "",
-      iface->mode == MODE_ACTIVE_BACKUP ? "active-backup" : "",
-      iface->mode == MODE_BROADCAST     ? "broadcast"     : "",
-      iface->mode == MODE_BALANCE_RR    ? "balance-rr"    : ""
-    );
-    fprintf(stderr, "    weight   : %d\n", iface->weight);
-    iface = iface->next;
-    if (iface == loaded->interfaces) break;
-  }
+  // Trigger update
+  config_pending = loaded;
+  update_workers();
+
+  // TODO: monitor threads here
+  // TODO: capture USR1 for config reload
+  sleep(10);
+
+  // Trigger graceful shutdown
+  config_pending = calloc(1, sizeof(pmlag_configuration));
+  update_workers();
+  return 0;
+
+  /* // DEBUG: Show loaded configuration */
+  /* fprintf(stderr, "Loaded configuration:\n"); */
+  /* pmlag_interface *iface = loaded->interfaces; */
+  /* while(iface) { */
+  /*   fprintf(stderr, "  Interface: %s\n", iface->name); */
+  /*   fprintf(stderr, "    master   : %s\n", iface->master ? iface->master : ""); */
+  /*   fprintf(stderr, "    mac      : %s\n", iface->mac    ? iface->mac    : ""); */
+  /*   fprintf(stderr, "    broadcast: %s%s\n", */
+  /*     iface->broadcast == BROADCAST_FLOOD    ? "flood"    : "", */
+  /*     iface->broadcast == BROADCAST_BALANCED ? "balanced" : "" */
+  /*   ); */
+  /*   fprintf(stderr, "    mode     : %s%s%s%s\n", */
+  /*     iface->mode == MODE_SLAVE         ? "slave"         : "", */
+  /*     iface->mode == MODE_ACTIVE_BACKUP ? "active-backup" : "", */
+  /*     iface->mode == MODE_BROADCAST     ? "broadcast"     : "", */
+  /*     iface->mode == MODE_BALANCE_RR    ? "balance-rr"    : "" */
+  /*   ); */
+  /*   fprintf(stderr, "    weight   : %d\n", iface->weight); */
+  /*   iface = iface->next; */
+  /*   if (iface == loaded->interfaces) break; */
+  /* } */
 
 
 
-  // TODO:
-  // - start thread for every interface
-  // - let thread create bond
-  // - let thread create socket
-  // - make thread close bond if not found in config
-  // - make thread close socket if not found in config
-  // - incoming on socket = send to master
-  // - incoming on master = <mode> to slaves
-  //   - mode_broadcast = to all
-  //   - mode_active_backup = preferred based upon socket open or not?
-  //   - mode_rr
-  //     - move interface to back of line when remainder = 0
-  //     - send packet and decrement remainder
-  // - implement config replacement on USR1 in parent
-  // - mutex all the things
-
-  config_free(loaded);
 
   /* int sockfd = sockraw_open(INTERFACE); */
 
@@ -153,7 +238,7 @@ int main(int argc, const char **argv) {
   /*   printf("\n"); */
   /* } */
 
-  return 0;
+  /* return 0; */
 }
 
 #ifdef __cplusplus

@@ -5,19 +5,22 @@
 extern "C" {
 #endif
 
+#include <semaphore.h>
+
 typedef struct {
   // Linked list
-  void *next;    // Ref to the next interface
+  void *next;      // Ref to the next interface
   // Config
-  char *name;    // Name of the interface
-  char *master;  // Name of the controlling interface
-  char *mac;     // Mac address to set on the interface
-  int broadcast; // Broadcast mode
-  int mode;      // Balancing mode
-  int weight;    // Weight of the interface
+  char *name;      // Name of the interface
+  char *master;    // Name of the controlling interface
+  char *mac;       // Mac address to set on the interface
+  int broadcast;   // Broadcast mode
+  int mode;        // Balancing mode
+  int weight;      // Weight of the interface
   // Activity
-  int socket;    // Socket file descriptor
-  int remainder; // Round robin remainder
+  int socket;      // Socket file descriptor
+  int remainder;   // Round robin remainder
+  sem_t sem_queue; // Egress queue
 } pmlag_interface;
 
 typedef struct {

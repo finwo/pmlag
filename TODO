@@ -1,0 +1,21 @@
+mvp:
+- start thread for every interface
+- let thread create bond
+- let thread create socket
+- mutex all the things
+- incoming on socket = send to master
+- incoming on master = flood to slaves
+balanced rr (a.k.a. spine-leaf-ish optimistic):
+- set remainder to weight if remainder = 0 (and move to back of line)
+- send packet and decrement remainder by 1
+config reloading:
+- listen to USR1 signal in parent thread
+- update config
+- create iface threads for new ifaces
+- make thread close socket if not found in config
+- make thread close bond if not found in config
+spine-leaf-pessimistic:
+- track seen mac addresses
+- send only to interfaces where it was seen
+- optionally send broadcast to all interfaces
+- remove known mac address from interface if not seen for weight * 2 on interface

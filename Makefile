@@ -4,6 +4,9 @@ LIBS=
 CFLAGS?=
 BIN=pmlag
 
+# We're using threads in our program
+CFLAGS+=-lpthread
+
 # Include lib/argparse
 SRC+=lib/argparse/argparse.c
 CFLAGS+=-Ilib/argparse
