@@ -1,19 +1,19 @@
-% pmlag(1) | General Commands Manual
+% ${NAME}(1) | General Commands Manual
 
 NAME
 ====
 
-pmlag - Poor man's link aggregator
+${NAME} - Poor man's link aggregator
 
 SYNOPSIS
 ========
 
-`pmlag [options]`
+`${NAME} [options]`
 
 DESCRIPTION
 ===========
 
-pmlag is a tool for bonding network interfaces together when the hardware on
+${NAME} is a tool for bonding network interfaces together when the hardware on
 the other side of the cable(s) doesn't necessarily support it.
 
 OPTIONS
@@ -25,7 +25,7 @@ Show the help message and exit
 
 #### `-c, --config <PATH>`
 
-Load a custom configuration instead of the default (/etc/pmlag.conf)
+Load a custom configuration instead of the default (/etc/${NAME}.conf)
 
 CONFIGURATION
 =============

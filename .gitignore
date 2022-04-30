@@ -1,2 +1,3 @@
 pmlag
-*.o
+*.[ao]
+pmlag.[1,html]
