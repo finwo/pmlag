@@ -46,8 +46,9 @@ Select the broadcast method for the bonded interface
 
 Select the balancing mode for non-broadcast packages
 
-- balance-rr: weighted round-robin balancing
 - active-backup: define a primary and backup interface
+- broadcast: always sent packets to all interfaces
+- balance-rr: weighted round-robin balancing
 
 #### mac
 
@@ -61,8 +62,9 @@ Define which bonded interface the current described interface belongs to
 
 Behaves differently depending on the mode the bonded interface is in:
 
-- balance-rr: Specifies the share of traffic the interface transmits
-- active-backup: Specifies the priority of the interface (higher = more preferred)
+- active-backup: priority of the interface (higher = more preferred)
+- broadcast: no effect
+- balance-rr: share of traffic the interface transmits
 
 Try to keep this number as low as possible, as it's used directly to define
 the number of packets to send before moving to the next interface in the

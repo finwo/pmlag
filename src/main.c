@@ -20,29 +20,182 @@ extern "C" {
 #define NAME "pmlag"
 #endif
 
+#define BROADCAST_FLOOD    1
+#define BROADCAST_BALANCED 2
+
+#define MODE_SLAVE         0
+#define MODE_ACTIVE_BACKUP 1
+#define MODE_BROADCAST     2
+#define MODE_BALANCE_RR    3
+
 static const char *const usage[] = {
   NAME " [options]",
   NULL
 };
 
+typedef struct {
+  // Linked list
+  void *next;    // Ref to the next interface
+  // Config
+  char *name;    // Name of the interface
+  char *master;  // Name of the controlling interface
+  char *mac;     // Mac address to set on the interface
+  int broadcast; // Broadcast mode
+  int mode;      // Balancing mode
+  int weight;    // Weight of the interface
+  // Activity
+  int socket;    // Socket file descriptor
+  int remainder; // Round robin remainder
+} pmlag_interface;
+
+typedef struct {
+  pmlag_interface *interfaces;
+} pmlag_configuration;
+
+pmlag_configuration *configuration_active  = NULL;
+pmlag_configuration *configuration_loading = NULL;
+
+static int config_load_handler(
+  void *user,
+  const char *section,
+  const char *name,
+  const char *value
+) {
+  pmlag_configuration* config = (pmlag_configuration *) user;
+
+  // Get interface being configured
+  pmlag_interface *iface = config->interfaces;
+  while(iface) {
+    if (!strcmp(iface->name, section)) {
+      break;
+    }
+    iface = iface->next;
+  }
+
+  // Create interface if not found
+  if (!iface) {
+    iface              = calloc(1, sizeof(pmlag_interface));
+    iface->next        = config->interfaces;
+    iface->name        = strdup(section);
+    config->interfaces = iface;
+  }
+
+
+  // Set found value
+  if (!strcmp("master", name)) {
+    iface->master = strdup(value);
+  } else if (!strcmp("weight", name)) {
+    iface->weight = atoi(value);
+  } else if (!strcmp("broadcast", name)) {
+    if (!strcmp("flood", value)) {
+      iface->broadcast = BROADCAST_FLOOD;
+    } else if (!strcmp("balanced", value)) {
+      iface->broadcast = BROADCAST_BALANCED;
+    } else {
+      fprintf(stderr, "Unknown broadcast: %s\n", value);
+      return 0;
+    }
+  } else if (!strcmp("mode", name)) {
+    if (!strcmp("slave", value)) {
+      iface->mode = MODE_SLAVE;
+    } else if (!strcmp("active-backup", value)) {
+      iface->mode = MODE_ACTIVE_BACKUP;
+    } else if (!strcmp("broadcast", value)) {
+      iface->mode = MODE_BROADCAST;
+    } else if (!strcmp("balance-rr", value)) {
+      iface->mode = MODE_BALANCE_RR;
+    } else {
+      fprintf(stderr, "Unknown mode: %s\n", value);
+      return 0;
+    }
+  } else if (!strcmp("mac", name)) {
+    // TODO: parse mac address
+    iface->mac = strdup(value);
+  } else {
+    return 0;
+  }
+
+  return 1;
+}
+
+void config_free(pmlag_configuration *config) {
+  if (!config) return;
+  pmlag_interface *iface_next;
+  pmlag_interface *iface = config->interfaces;
+  while(iface) {
+    iface_next = iface->next;
+    if (iface_next == config->interfaces) break;
+    if (iface->mac   ) free(iface->mac);
+    if (iface->master) free(iface->master);
+    if (iface->name  ) free(iface->name);
+    free(iface);
+    iface = iface_next;
+  }
+  free(config);
+}
+
+pmlag_configuration * config_load(const char * filename) {
+  // Load config, entry-by-entry
+  pmlag_configuration *config = calloc(1, sizeof(pmlag_configuration));
+  if (ini_parse(filename, config_load_handler, config) < 0) {
+    fprintf(stderr, "Can not load %s\n", filename);
+    return NULL;
+  }
+  // Loop interface list
+  pmlag_interface *iface = config->interfaces;
+  while (iface && iface->next) iface = iface->next;
+  if (iface) iface->next = config->interfaces;
+  // Return produce
+  return config;
+}
+
 int main(int argc, const char **argv) {
   const char *config_file = "/etc/" NAME ".conf";
 
+  // Define which options we support
   struct argparse_option options[] = {
     OPT_HELP(),
     OPT_STRING('c', "config", &config_file, "Config file to use", NULL, 0, 0),
     OPT_END(),
   };
 
+  // Parse command line arguments
   struct argparse argparse;
   argparse_init(&argparse, options, usage, 0);
   argparse_describe(&argparse, NULL,
       // TODO: format to terminal width
       "\n" NAME " is a tool for bonding network interfaces together when the "
-      "hardware\non the other side of the cable doesn't necessarily support it."
+      "hardware\non the other side of the cable(s) doesn't support it."
       "\n"
   );
   argc = argparse_parse(&argparse, argc, argv);
+
+  // Load configuration
+  pmlag_configuration *loaded = config_load(config_file);
+
+  // VERY validation
+  if (!loaded->interfaces) {
+    fprintf(stderr, "No interfaces defined in config\n");
+    return 1;
+  }
+
+  // TODO:
+  // - start thread for every interface
+  // - let thread create bond
+  // - let thread create socket
+  // - make thread close bond if not found in config
+  // - make thread close socket if not found in config
+  // - incoming on socket = send to master
+  // - incoming on master = <mode> to slaves
+  //   - mode_broadcast = to all
+  //   - mode_active_backup = preferred based upon socket open or not?
+  //   - mode_rr
+  //     - move interface to back of line when remainder = 0
+  //     - send packet and decrement remainder
+  // - implement config replacement on USR1 in parent
+  // - mutex all the things
+
+  config_free(loaded);
 
   /* int sockfd = sockraw_open(INTERFACE); */
 
