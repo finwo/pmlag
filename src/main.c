@@ -9,7 +9,8 @@
 #include <sys/socket.h>
 
 #include "argparse.h"
-#include "ini.h"
+#include "config.h"
+#include "main.h"
 #include "socket.h"
 
 #ifdef __cplusplus
@@ -20,134 +21,12 @@ extern "C" {
 #define NAME "pmlag"
 #endif
 
-#define BROADCAST_FLOOD    1
-#define BROADCAST_BALANCED 2
-
-#define MODE_SLAVE         0
-#define MODE_ACTIVE_BACKUP 1
-#define MODE_BROADCAST     2
-#define MODE_BALANCE_RR    3
-
 static const char *const usage[] = {
   NAME " [options]",
   NULL
 };
 
-typedef struct {
-  // Linked list
-  void *next;    // Ref to the next interface
-  // Config
-  char *name;    // Name of the interface
-  char *master;  // Name of the controlling interface
-  char *mac;     // Mac address to set on the interface
-  int broadcast; // Broadcast mode
-  int mode;      // Balancing mode
-  int weight;    // Weight of the interface
-  // Activity
-  int socket;    // Socket file descriptor
-  int remainder; // Round robin remainder
-} pmlag_interface;
-
-typedef struct {
-  pmlag_interface *interfaces;
-} pmlag_configuration;
-
-pmlag_configuration *configuration_active  = NULL;
-pmlag_configuration *configuration_loading = NULL;
-
-static int config_load_handler(
-  void *user,
-  const char *section,
-  const char *name,
-  const char *value
-) {
-  pmlag_configuration* config = (pmlag_configuration *) user;
-
-  // Get interface being configured
-  pmlag_interface *iface = config->interfaces;
-  while(iface) {
-    if (!strcmp(iface->name, section)) {
-      break;
-    }
-    iface = iface->next;
-  }
-
-  // Create interface if not found
-  if (!iface) {
-    iface              = calloc(1, sizeof(pmlag_interface));
-    iface->next        = config->interfaces;
-    iface->name        = strdup(section);
-    config->interfaces = iface;
-  }
-
-
-  // Set found value
-  if (!strcmp("master", name)) {
-    iface->master = strdup(value);
-  } else if (!strcmp("weight", name)) {
-    iface->weight = atoi(value);
-  } else if (!strcmp("broadcast", name)) {
-    if (!strcmp("flood", value)) {
-      iface->broadcast = BROADCAST_FLOOD;
-    } else if (!strcmp("balanced", value)) {
-      iface->broadcast = BROADCAST_BALANCED;
-    } else {
-      fprintf(stderr, "Unknown broadcast: %s\n", value);
-      return 0;
-    }
-  } else if (!strcmp("mode", name)) {
-    if (!strcmp("slave", value)) {
-      iface->mode = MODE_SLAVE;
-    } else if (!strcmp("active-backup", value)) {
-      iface->mode = MODE_ACTIVE_BACKUP;
-    } else if (!strcmp("broadcast", value)) {
-      iface->mode = MODE_BROADCAST;
-    } else if (!strcmp("balance-rr", value)) {
-      iface->mode = MODE_BALANCE_RR;
-    } else {
-      fprintf(stderr, "Unknown mode: %s\n", value);
-      return 0;
-    }
-  } else if (!strcmp("mac", name)) {
-    // TODO: parse mac address
-    iface->mac = strdup(value);
-  } else {
-    return 0;
-  }
-
-  return 1;
-}
-
-void config_free(pmlag_configuration *config) {
-  if (!config) return;
-  pmlag_interface *iface_next;
-  pmlag_interface *iface = config->interfaces;
-  while(iface) {
-    iface_next = iface->next;
-    if (iface_next == config->interfaces) break;
-    if (iface->mac   ) free(iface->mac);
-    if (iface->master) free(iface->master);
-    if (iface->name  ) free(iface->name);
-    free(iface);
-    iface = iface_next;
-  }
-  free(config);
-}
-
-pmlag_configuration * config_load(const char * filename) {
-  // Load config, entry-by-entry
-  pmlag_configuration *config = calloc(1, sizeof(pmlag_configuration));
-  if (ini_parse(filename, config_load_handler, config) < 0) {
-    fprintf(stderr, "Can not load %s\n", filename);
-    return NULL;
-  }
-  // Loop interface list
-  pmlag_interface *iface = config->interfaces;
-  while (iface && iface->next) iface = iface->next;
-  if (iface) iface->next = config->interfaces;
-  // Return produce
-  return config;
-}
+pmlag_configuration *config  = NULL;
 
 int main(int argc, const char **argv) {
   const char *config_file = "/etc/" NAME ".conf";
@@ -178,6 +57,30 @@ int main(int argc, const char **argv) {
     fprintf(stderr, "No interfaces defined in config\n");
     return 1;
   }
+
+  // DEBUG: Show loaded configuration
+  fprintf(stderr, "Loaded configuration:\n");
+  pmlag_interface *iface = loaded->interfaces;
+  while(iface) {
+    fprintf(stderr, "  Interface: %s\n", iface->name);
+    fprintf(stderr, "    master   : %s\n", iface->master ? iface->master : "");
+    fprintf(stderr, "    mac      : %s\n", iface->mac    ? iface->mac    : "");
+    fprintf(stderr, "    broadcast: %s%s\n",
+      iface->broadcast == BROADCAST_FLOOD    ? "flood"    : "",
+      iface->broadcast == BROADCAST_BALANCED ? "balanced" : ""
+    );
+    fprintf(stderr, "    mode     : %s%s%s%s\n",
+      iface->mode == MODE_SLAVE         ? "slave"         : "",
+      iface->mode == MODE_ACTIVE_BACKUP ? "active-backup" : "",
+      iface->mode == MODE_BROADCAST     ? "broadcast"     : "",
+      iface->mode == MODE_BALANCE_RR    ? "balance-rr"    : ""
+    );
+    fprintf(stderr, "    weight   : %d\n", iface->weight);
+    iface = iface->next;
+    if (iface == loaded->interfaces) break;
+  }
+
+
 
   // TODO:
   // - start thread for every interface
