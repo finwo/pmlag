@@ -1,6 +1,0 @@
-[submodule "lib/argparse"]
-	path = lib/argparse
-	url = git://git.finwo.net/argparse
-[submodule "lib/inih"]
-	path = lib/inih
-	url = git://git.finwo.net/inih
