@@ -14,13 +14,23 @@ override CFLAGS+=$(INCLUDES)
 # Which objects to generate before merging everything together
 OBJ:=$(SRC:.c=.o)
 
-default: pmlag
+BIN=pmlag
+
+default: $(BIN)
 
 %.o: %.c $(LIBS)
 	$(CC) $(CFLAGS) $(@:.o=.c) -c -o $@
 
-pmlag: $(OBJ)
+$(BIN): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $@
+
+# Build manpage
+$(BIN).1: manpage.1.md
+	env NAME=$(BIN) envsubst < manpage.1.md | pandoc --standalone --from markdown --to man -o $(BIN).1
+	env NAME=$(BIN) envsubst < manpage.1.md | pandoc --standalone --from markdown --to html -o $(BIN).html
+
+README.md: manpage.1.md
+	env NAME=$(BIN) envsubst < manpage.1.md > README.md
 
 .PHONY: clean
 clean:
