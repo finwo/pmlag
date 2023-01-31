@@ -20,7 +20,7 @@ BIN=pmlag
 default: $(BIN) $(BIN).1 README.md
 
 %.o: %.c $(LIBS)
-	$(CC) $(CFLAGS) $(@:.o=.c) -c -o $@
+	$(CC) $(CFLAGS) $(@:.o=.c) -D__NAME=\"$(BIN)\" -c -o $@
 
 $(BIN): $(OBJ)
 	$(CC) $(CFLAGS) $(OBJ) -o $@
