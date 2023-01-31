@@ -16,7 +16,8 @@ OBJ:=$(SRC:.c=.o)
 
 BIN=pmlag
 
-default: $(BIN)
+.PHONY: default
+default: $(BIN) $(BIN).1 README.md
 
 %.o: %.c $(LIBS)
 	$(CC) $(CFLAGS) $(@:.o=.c) -c -o $@
