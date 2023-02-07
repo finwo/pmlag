@@ -1,6 +1,8 @@
 #ifndef __PMLAG_CONFIG_H__
 #define __PMLAG_CONFIG_H__
 
+#include <pthread.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,12 +16,14 @@ struct pmlag_interface {
   void *next;
   char *name;
   int weight;
+  struct pmlag_bond *bond;
 };
 
 struct pmlag_bond {
   void *next;
   char *name;
   int   mode;
+  pthread_t tid;
   struct pmlag_interface *interfaces;
 };
 

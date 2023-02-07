@@ -5,6 +5,7 @@
 #include <net/if.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -21,6 +22,16 @@ static const char *const usage[] = {
   __NAME " [options]",
   NULL
 };
+
+
+void * thread_bond(void *arg) {
+  struct pmlag_bond *bond = (struct pmlag_bond *)arg;
+  printf("Thread started for bond: %s\n", bond->name);
+  pthread_exit(NULL);
+  return NULL;
+}
+
+    /* thread->tid = pthread_create(&(thread->tid), NULL, iface_thread, thread); */
 
 int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
@@ -49,32 +60,20 @@ int main(int argc, const char **argv) {
     return 1;
   }
 
-  printf("Loaded configuration:\n");
   // For each bond of config->bonds
   struct pmlag_bond *bond = config->bonds;
-  struct pmlag_interface *iface;
   while(bond) {
-    printf("\n%s:\n", bond->name);
-    printf("    mode: %s\n", (
-        bond->mode == PMLAG_MODE_NONE
-          ? "NONE"
-          : (
-              bond->mode == PMLAG_MODE_BROADCAST
-              ? "BROADCAST"
-              : (
-                  bond->mode == PMLAG_MODE_BALANCED_RR
-                  ? "BROADCAST"
-                  : "ACTIVE_BACKUP"
-                )
-            )
-    ));
-    iface = bond->interfaces;
-    // For each iface of config->interfaces
-    while(iface) {
-      printf("\n    %s:\n", iface->name);
-      printf("        weight: %d\n", iface->weight);
-      iface = iface->next;
+    if(pthread_create(&(bond->tid), NULL, thread_bond, bond)) {
+      perror("Starting bond thread");
+      return 1;
     }
+    bond = bond->next;
+  }
+
+  // Wait for all bonds to finish
+  bond = config->bonds;
+  while(bond) {
+    pthread_join(bond->tid, NULL);
     bond = bond->next;
   }
 
@@ -217,5 +216,6 @@ int main(int argc, const char **argv) {
   /* printf("name: %s\n", __NAME); */
   /* printf("conf: %s\n", config_file); */
   /* printf("sock: %d\n", sockfd); */
-  return 42;
+
+  return 0;
 }

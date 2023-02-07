@@ -64,6 +64,7 @@ static int config_load_handler(
       iface->next      = bond->interfaces;
       iface->name      = strdup(value);
       iface->weight    = 10;
+      iface->bond      = bond;
       bond->interfaces = iface;
     }
 
