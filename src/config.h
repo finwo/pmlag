@@ -12,10 +12,11 @@ extern "C" {
 #define PMLAG_MODE_BROADCAST     2
 #define PMLAG_MODE_BALANCED_RR   3
 
-struct pmlag_interface {
+struct pmlag_iface {
   void *next;
   char *name;
   int weight;
+  pthread_t tid;
   struct pmlag_bond *bond;
 };
 
@@ -24,7 +25,7 @@ struct pmlag_bond {
   char *name;
   int   mode;
   pthread_t tid;
-  struct pmlag_interface *interfaces;
+  struct pmlag_iface *interfaces;
 };
 
 struct pmlag_configuration {

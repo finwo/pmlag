@@ -31,7 +31,7 @@ static int config_load_handler(
   }
 
   // Get interface being configured
-  struct pmlag_interface *iface = bond->interfaces;
+  struct pmlag_iface *iface = bond->interfaces;
 
   if (0) {
     // Intentionally empty
@@ -60,7 +60,7 @@ static int config_load_handler(
 
     // Create iface if not found
     if (!iface) {
-      iface            = calloc(1, sizeof(struct pmlag_interface));
+      iface            = calloc(1, sizeof(struct pmlag_iface));
       iface->next      = bond->interfaces;
       iface->name      = strdup(value);
       iface->weight    = 10;

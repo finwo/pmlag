@@ -11,6 +11,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "cofyc/argparse.h"
 #include "config.h"
@@ -23,15 +24,50 @@ static const char *const usage[] = {
   NULL
 };
 
+void * thread_iface(void *arg) {
+  struct pmlag_iface *iface = (struct pmlag_iface *)arg;
+  printf("Thread started for iface: %s->%s\n", iface->bond->name, iface->name);
 
-void * thread_bond(void *arg) {
-  struct pmlag_bond *bond = (struct pmlag_bond *)arg;
-  printf("Thread started for bond: %s\n", bond->name);
+  // TODO: open raw socket on iface
+  // TODO: blocking listen on iface, send to bond
+  // TODO: track announces in routing table
+
+  sleep(3);
   pthread_exit(NULL);
   return NULL;
 }
 
-    /* thread->tid = pthread_create(&(thread->tid), NULL, iface_thread, thread); */
+void * thread_bond(void *arg) {
+  struct pmlag_bond *bond = (struct pmlag_bond *)arg;
+  printf("Thread started for bond: %s\n", bond->name);
+
+  // For each bond of config->bonds
+  struct pmlag_iface *iface = bond->interfaces;
+  while(iface) {
+    if(pthread_create(&(iface->tid), NULL, thread_iface, iface)) {
+      perror("Starting iface thread");
+      pthread_exit((void*)1);
+      return (void*)1;
+    }
+    iface = iface->next;
+  }
+
+  // TODO: create bonded interface here
+  // TODO: blocked listen on bond, send through routing table to other ifaces
+  // TODO: send broadcasts to all interfaces
+  // TODO: timer to broadcast announce our presence to ifaces (keepalive-ish)
+  //          hint: include sequence id, so tracking can react quickly (seq dist > 1)
+
+  // Wait for iface threads to finish
+  iface = bond->interfaces;
+  while(iface) {
+    pthread_join(iface->tid, NULL);
+    iface = iface->next;
+  }
+
+  pthread_exit(NULL);
+  return NULL;
+}
 
 int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
