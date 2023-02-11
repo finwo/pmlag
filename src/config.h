@@ -15,7 +15,8 @@ extern "C" {
 struct pmlag_iface {
   void *next;
   char *name;
-  int weight;
+  int   weight;
+  int   sockfd;
   pthread_t tid;
   struct pmlag_bond *bond;
 };
@@ -24,6 +25,7 @@ struct pmlag_bond {
   void *next;
   char *name;
   int   mode;
+  int   sockfd;
   pthread_t tid;
   struct pmlag_iface *interfaces;
 };
