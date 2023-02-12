@@ -55,10 +55,6 @@ void * thread_iface(void *arg) {
   }
 
   // Find bond socket iface_idx
-  struct sockaddr_ll sadr_ll;
-  sadr_ll.sll_halen = ETH_ALEN; // length of destination mac address */
-  int bond_fd       = iface->bond->sockfd;
-  int bond_idx      = iface_idx(bond_fd, iface->bond->name);
   int send_len;
 
   while(1) {
@@ -74,12 +70,19 @@ void * thread_iface(void *arg) {
 
     // TODO: track received proto=0x0666 packet to update routing table
 
+    /* printf("\n"); */
+    /* printf("Got packet: %d bytes\n", buflen); */
+    /* printf("\n"); */
+
+    /* printf("Ethernet header\n"); */
+    /* printf("\t|- DST    %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5]); */
+    /* printf("\t|- SRC    %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11]); */
+    /* printf("\t|- PROTO  %.4X\n", ((int)((char)buffer[12]) << 8) + buffer[13]); */
+
     // Redirect packet to bond socket as-is
-    sadr_ll.sll_ifindex = bond_idx;
-    memcpy(sadr_ll.sll_addr, buffer, ETH_ALEN);
-    send_len = sendto(bond_fd, buffer, buflen, 0, (const struct sockaddr*)&sadr_ll, sizeof(struct sockaddr_ll));
+    send_len = write(iface->bond->sockfd, buffer, buflen);
     if (buflen != send_len) {
-      perror("sendto");
+      perror("write(bond)");
       pthread_exit(NULL);
       return NULL;
     }
@@ -94,7 +97,9 @@ void * thread_bond(void *arg) {
   struct pmlag_bond *bond = (struct pmlag_bond *)arg;
   printf("Thread started for bond: %s\n", bond->name);
 
-  // For each bond of config->bonds
+
+
+  // Start thread for each interface of this bond
   struct pmlag_iface *iface = bond->interfaces;
   while(iface) {
     if(pthread_create(&(iface->tid), NULL, thread_iface, iface)) {
@@ -105,7 +110,9 @@ void * thread_bond(void *arg) {
     iface = iface->next;
   }
 
-  // TODO: open tun/tap device
+  // Take mac address of last iface
+  bond->sockfd = tap_alloc(bond->name);
+
   // TODO: blocked listen on bond, send through routing table to other ifaces
   // TODO: send broadcasts to all interfaces
   // TODO: timer to broadcast announce our presence to ifaces (vrrp-ish)

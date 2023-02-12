@@ -5,6 +5,7 @@
 extern "C" {
 #endif
 
+int tap_alloc(char * ifname);
 int sockraw_open(char * ifname);
 int iface_idx(int sockfd, char * ifname);
 
