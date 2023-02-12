@@ -13,21 +13,22 @@ extern "C" {
 #define PMLAG_MODE_BALANCED_RR   3
 
 struct pmlag_iface {
-  void *next;
-  char *name;
-  int   weight;
-  int   sockfd;
-  pthread_t tid;
-  struct pmlag_bond *bond;
+  void *next;              // linked-list next reference
+  char *name;              // name of the interface this object represents
+  int   weight;            // weight of this interface within the bond
+  int   sockfd;            // file descriptor for the iface raw socket
+  pthread_t tid;           // thread id where the iface listener recides in
+  struct pmlag_bond *bond; // reference to the bond this iface belongs to
 };
 
 struct pmlag_bond {
-  void *next;
-  char *name;
-  int   mode;
-  int   sockfd;
-  pthread_t tid;
-  struct pmlag_iface *interfaces;
+  void *next;                     // linked-list next reference
+  char *name;                     // name of the bond interface
+  int   mode;                     // which mode to run pmlag in for this bond
+  int   sockfd;                   // file descriptor for the bond socket interface
+  pthread_t tid;                  // thread id where the bond interface listener recides in
+  pthread_mutex_t mtx_rt;         // lock for the routing table of the bond
+  struct pmlag_iface *interfaces; // linked-list of interfaces contained in the bond
 };
 
 struct pmlag_configuration {

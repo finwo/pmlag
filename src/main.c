@@ -44,9 +44,9 @@ void * thread_iface(void *arg) {
 
   printf("Thread started for iface: %s->%s(%d)\n", iface->bond->name, iface->name, iface->sockfd);
 
-  // Allow some time for all threads to register their sockets
-  // TODO: use a mutex from main thread for this to not have idle-time?
-  sleep(1);
+  // Wait for the bond thread to finish initializing
+  pthread_mutex_lock(&(iface->bond->mtx_rt));
+  pthread_mutex_unlock(&(iface->bond->mtx_rt));
 
   // Bail if the bond's socket could not be opened
   if (!iface->bond->sockfd) {
@@ -97,7 +97,8 @@ void * thread_bond(void *arg) {
   struct pmlag_bond *bond = (struct pmlag_bond *)arg;
   printf("Thread started for bond: %s\n", bond->name);
 
-
+  // Lock this bond's routing table
+  pthread_mutex_lock(&(bond->mtx_rt));
 
   // Start thread for each interface of this bond
   struct pmlag_iface *iface = bond->interfaces;
@@ -112,6 +113,9 @@ void * thread_bond(void *arg) {
 
   // Take mac address of last iface
   bond->sockfd = tap_alloc(bond->name);
+
+  // Free this bond's routing table
+  pthread_mutex_unlock(&(bond->mtx_rt));
 
   // TODO: blocked listen on bond, send through routing table to other ifaces
   // TODO: send broadcasts to all interfaces
@@ -159,6 +163,12 @@ int main(int argc, const char **argv) {
   // For each bond of config->bonds
   struct pmlag_bond *bond = config->bonds;
   while(bond) {
+    // Initialize it's routing table lock
+    if (pthread_mutex_init(&(bond->mtx_rt), NULL) != 0) {
+      perror("Initializing mutex for bond");
+      return 1;
+    }
+    // And start it's thread
     if(pthread_create(&(bond->tid), NULL, thread_bond, bond)) {
       perror("Starting bond thread");
       return 1;
