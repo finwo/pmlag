@@ -77,12 +77,13 @@ int tap_alloc(char * ifname) {
      */
     ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
     if( *ifname ) {
-       strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+      strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
     }
 
     if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
-       close(fd);
-       return err;
+      perror("Open tun");
+      close(fd);
+      return err;
     }
 
     strcpy(ifname, ifr.ifr_name);
