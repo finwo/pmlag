@@ -1,7 +1,8 @@
 #include <fcntl.h>
+#include <linux/if_arp.h>
 #include <linux/if_packet.h>
 #include <linux/if_tun.h>
-#include <net/if.h>
+#include <linux/if.h>
 #include <netinet/in.h>
 #include <string.h>
 #include <strings.h>
@@ -12,6 +13,18 @@
 #include <unistd.h>
 
 #include "socket.h"
+
+unsigned char * iface_mac(char * ifname) {
+	struct ifreq ifr;
+	unsigned char *mac = calloc(1, ETH_HLEN);
+  int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
+	ifr.ifr_addr.sa_family = AF_PACKET;
+	strncpy(ifr.ifr_name , ifname , IFNAMSIZ-1);
+	ioctl(sockfd, SIOCGIFHWADDR, &ifr);
+	close(sockfd);
+	memcpy(mac, ifr.ifr_hwaddr.sa_data, ETH_HLEN);
+  return mac;
+}
 
 int iface_idx(int sockfd, char * ifname) {
   struct ifreq ifr;
@@ -59,7 +72,18 @@ int sockraw_open(char * ifname) {
   return sockfd;
 }
 
-int tap_alloc(char * ifname) {
+static int if_ioctl(int cmd, struct ifreq* req) {
+    int ret, sock;
+    sock = socket(AF_INET, SOCK_PACKET, 0);
+    if (sock < 0) {
+        return -1;
+    }
+    ret = ioctl(sock, cmd, req);
+    close(sock);
+    return ret;
+}
+
+int tap_alloc(char * ifname, unsigned char * mac) {
     struct ifreq ifr;
     int fd, err;
 
@@ -68,24 +92,48 @@ int tap_alloc(char * ifname) {
       return -1;
     }
 
+    // Bring up the interface
     memset(&ifr, 0, sizeof(ifr));
-
-    /* Flags: IFF_TUN   - TUN device (no Ethernet headers)
-     *        IFF_TAP   - TAP device
-     *
-     *        IFF_NO_PI - Do not provide packet information
-     */
-    ifr.ifr_flags = IFF_TAP | IFF_NAPI | IFF_MULTI_QUEUE | IFF_UP;
+    ifr.ifr_flags = IFF_TAP | IFF_NAPI | IFF_MULTI_QUEUE;
     if( *ifname ) {
       strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
     }
-
+    /* if ( mac ) { */
+    /*   // TODO: random, copied or specific mac address pulled from ini */
+    /*   printf("MAC: %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]); */
+    /*   memset(&ifr, 0, sizeof(ifr)); */
+    /*   strcpy(ifr.ifr_name, ifname); */
+    /*   ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER; */
+    /*   memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_HLEN); */
+    /*   if ((err = if_ioctl(SIOCSIFHWADDR, &ifr)) < 0) { */
+    /*     perror("Set if hwaddr"); */
+    /*     close(fd); */
+    /*     return err; */
+    /*   } */
+    /* } */
     if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
       perror("Open tun");
       close(fd);
       return err;
     }
-
     strcpy(ifname, ifr.ifr_name);
+
+    // Set interface to multicast|broadcast
+    memset(&ifr, 0, sizeof(ifr));
+    strcpy(ifr.ifr_name, ifname);
+    if (if_ioctl(SIOCGIFFLAGS, &ifr) < 0) {
+      perror("failed to get the interface flags");
+      close(fd);
+      return err;
+    }
+    if (!(ifr.ifr_flags & IFF_UP)) {
+      ifr.ifr_flags |= IFF_UP;
+      if (if_ioctl(SIOCSIFFLAGS, &ifr) < 0) {
+        perror("failed to get the interface flags");
+        close(fd);
+        return err;
+      }
+    }
+
     return fd;
 }

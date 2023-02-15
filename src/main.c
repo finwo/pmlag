@@ -162,9 +162,12 @@ int main(int argc, const char **argv) {
   // Initialize interfaces for all configured bonds
   struct pmlag_bond *bond = config->bonds;
   struct pmlag_iface *iface;
+  unsigned char *mac;
   while(bond) {
 
-    bond->sockfd = tap_alloc(bond->name);
+    mac = iface_mac(bond->interfaces->name);
+    bond->sockfd = tap_alloc(bond->name, mac);
+    free(mac);
     if (bond->sockfd < 0) return 3;
 
     iface = bond->interfaces;
