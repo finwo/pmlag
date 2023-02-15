@@ -36,11 +36,11 @@ void * thread_iface(void *arg) {
   /*   return NULL; */
   /* } */
 
-  /* // Reserve receive buffer, support 64k packets just in case */
-  /* int buflen; */
-  /* unsigned char *buffer = (unsigned char *) malloc(RCVBUFSIZ); */
-  /* struct sockaddr saddr; */
-  /* int saddr_len  = sizeof(saddr); */
+  // Reserve receive buffer, support 64k packets just in case
+  int buflen;
+  unsigned char *buffer = (unsigned char *) malloc(RCVBUFSIZ);
+  struct sockaddr saddr;
+  int saddr_len  = sizeof(saddr);
 
   printf("Thread started for iface: %s->%s(%d)\n", iface->bond->name, iface->name, iface->sockfd);
 
@@ -48,47 +48,44 @@ void * thread_iface(void *arg) {
   /* pthread_mutex_lock(&(iface->bond->mtx_rt)); */
   /* pthread_mutex_unlock(&(iface->bond->mtx_rt)); */
 
-  /* // Bail if the bond's socket could not be opened */
-  /* if (!iface->bond->sockfd) { */
-  /*   pthread_exit(NULL); */
-  /*   return NULL; */
-  /* } */
+  // Find bond socket iface_idx
+  int send_len;
 
-  /* // Find bond socket iface_idx */
-  /* int send_len; */
+  while(1) {
 
-  /* while(1) { */
+    // Zero out buffer, to prevent pollution, & receive packet
+    memset(buffer, 0, RCVBUFSIZ);
+    buflen = recvfrom(iface->sockfd, buffer, RCVBUFSIZ, 0, &saddr, (socklen_t *)&saddr_len);
+    if (buflen < 0) {
+      perror("recvfrom");
+      pthread_exit(NULL);
+      return NULL;
+    }
 
-  /*   // Zero out buffer, to prevent pollution, & receive packet */
-  /*   memset(buffer, 0, RCVBUFSIZ); */
-  /*   buflen = recvfrom(iface->sockfd, buffer, RCVBUFSIZ, 0, &saddr, (socklen_t *)&saddr_len); */
-  /*   if (buflen < 0) { */
-  /*     perror("recvfrom"); */
-  /*     pthread_exit(NULL); */
-  /*     return NULL; */
-  /*   } */
+    // TODO: track received proto=0x0666 packet to update routing table
 
-  /*   // TODO: track received proto=0x0666 packet to update routing table */
+    printf("\n");
+    printf("Got packet: %d bytes\n", buflen);
+    printf("\n");
 
-  /*   printf("\n"); */
-  /*   printf("Got packet: %d bytes\n", buflen); */
-  /*   printf("\n"); */
+    printf("Ethernet header\n");
+    printf("\t|- DST    %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5]);
+    printf("\t|- SRC    %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11]);
+    printf("\t|- PROTO  %.4X\n", ((int)((char)buffer[12]) << 8) + buffer[13]);
+    printf("\n");
 
-  /*   printf("Ethernet header\n"); */
-  /*   printf("\t|- DST    %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5]); */
-  /*   printf("\t|- SRC    %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11]); */
-  /*   printf("\t|- PROTO  %.4X\n", ((int)((char)buffer[12]) << 8) + buffer[13]); */
-  /*   printf("\n"); */
+    /* memset(buffer + 16, 0, buflen - 16); */
 
-  /*   // Redirect packet to bond socket as-is */
-  /*   printf("Bond iface: %d\n\n", iface->bond->sockfd); */
-  /*   send_len = write(iface->bond->sockfd, buffer, buflen); */
-  /*   if (buflen != send_len) { */
-  /*     perror("write(bond)"); */
-  /*     pthread_exit(NULL); */
-  /*     return NULL; */
-  /*   } */
-  /* } */
+    // Redirect packet to bond socket as-is
+    printf("Bond iface: %d\n\n", iface->bond->sockfd);
+    send_len = write(iface->bond->sockfd, buffer, buflen);
+    printf("Got %d, sent %d\n\n", buflen, send_len);
+    if (buflen != send_len) {
+      perror("write(bond)");
+      /* pthread_exit(NULL); */
+      /* return NULL; */
+    }
+  }
 
   /* sleep(3); */
   pthread_exit(NULL);

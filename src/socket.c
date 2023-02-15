@@ -75,7 +75,7 @@ int tap_alloc(char * ifname) {
      *
      *        IFF_NO_PI - Do not provide packet information
      */
-    ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+    ifr.ifr_flags = IFF_TAP | IFF_NAPI | IFF_MULTI_QUEUE | IFF_UP;
     if( *ifname ) {
       strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
     }
