@@ -17,6 +17,7 @@ struct pmlag_iface {
   char *name;              // name of the interface this object represents
   int   weight;            // weight of this interface within the bond
   int   sockfd;            // file descriptor for the iface raw socket
+  int   ifidx;             // index of the interface within the socket
   pthread_t tid;           // thread id where the iface listener recides in
   struct pmlag_bond *bond; // reference to the bond this iface belongs to
 };

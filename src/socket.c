@@ -16,13 +16,13 @@
 
 unsigned char * iface_mac(char * ifname) {
 	struct ifreq ifr;
-	unsigned char *mac = calloc(1, ETH_HLEN);
+	unsigned char *mac = calloc(1, ETH_ALEN);
   int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
 	ifr.ifr_addr.sa_family = AF_PACKET;
 	strncpy(ifr.ifr_name , ifname , IFNAMSIZ-1);
 	ioctl(sockfd, SIOCGIFHWADDR, &ifr);
 	close(sockfd);
-	memcpy(mac, ifr.ifr_hwaddr.sa_data, ETH_HLEN);
+	memcpy(mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
   return mac;
 }
 
@@ -94,7 +94,7 @@ int tap_alloc(char * ifname, unsigned char * mac) {
 
     // Bring up the interface
     memset(&ifr, 0, sizeof(ifr));
-    ifr.ifr_flags = IFF_TAP | IFF_NAPI | IFF_MULTI_QUEUE;
+    ifr.ifr_flags = IFF_TAP | IFF_MULTI_QUEUE | IFF_NO_PI;
     if( *ifname ) {
       strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
     }
@@ -104,7 +104,7 @@ int tap_alloc(char * ifname, unsigned char * mac) {
     /*   memset(&ifr, 0, sizeof(ifr)); */
     /*   strcpy(ifr.ifr_name, ifname); */
     /*   ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER; */
-    /*   memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_HLEN); */
+    /*   memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_ALEN); */
     /*   if ((err = if_ioctl(SIOCSIFHWADDR, &ifr)) < 0) { */
     /*     perror("Set if hwaddr"); */
     /*     close(fd); */
