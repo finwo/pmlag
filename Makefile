@@ -2,7 +2,7 @@
 LIBS=
 SRC=$(wildcard src/*.c)
 
-override CFLAGS?=-Wall
+override CFLAGS?=-Wall -g
 
 INCLUDES:=
 INCLUDES+=-I src
