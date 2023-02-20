@@ -17,8 +17,6 @@
 #include "config.h"
 #include "socket.h"
 
-/* #define INTERFACE "enp0s13f0u2c2" */
-
 #define RCVBUFSIZ 65536
 
 static const char *const usage[] = {
@@ -45,7 +43,7 @@ void * thread_iface(void *arg) {
   // Get the interface's idx on the socket
   iface->ifidx = iface_idx(iface->sockfd, iface->name);
 
-  printf("Thread started for iface: %s->%s(%d)\n", iface->bond->name, iface->name, iface->sockfd);
+  /* printf("Thread started for iface: %s->%s(%d)\n", iface->bond->name, iface->name, iface->sockfd); */
 
   // Wait for the bond thread to finish initializing
   pthread_mutex_lock(&(iface->bond->mtx_rt));
@@ -98,7 +96,7 @@ void * thread_iface(void *arg) {
 
 void * thread_bond(void *arg) {
   struct pmlag_bond *bond = (struct pmlag_bond *)arg;
-  printf("Thread started for bond: %s\n", bond->name);
+  /* printf("Thread started for bond: %s\n", bond->name); */
 
   // Assign bond interface
   unsigned char *mac = iface_mac(bond->interfaces->name);
@@ -134,6 +132,8 @@ void * thread_bond(void *arg) {
   unsigned char *buffer = (unsigned char *) malloc(RCVBUFSIZ);
   struct sockaddr_ll saddr_ll;
   saddr_ll.sll_halen = ETH_ALEN;
+
+  sleep(1);
 
   while(1) {
     /* sleep(1); */
@@ -236,6 +236,55 @@ int main(int argc, const char **argv) {
 
     bond = bond->next;
   }
+
+  // Timer, keep broadcasting "I'm here" packets
+  struct pmlag_iface *iface;
+  struct sockaddr_ll saddr_ll;
+  saddr_ll.sll_halen = ETH_ALEN;
+  unsigned char *mac;
+  uint16_t ethtype = htons(0x0666);
+  int buflen = (ETH_ALEN*2) + 2 + 46;
+  unsigned char *buffer = calloc(1, buflen);
+  int send_len;
+  memset(buffer, 0xFF, ETH_ALEN);                          // DST = broadcast
+  memcpy(buffer+(ETH_ALEN*2), &ethtype, sizeof(uint16_t)); // EtherType = 0x0666 = custom
+  while(1) {
+    bond = config->bonds;
+    while(bond) {
+      // Set source address in saddr_ll and packet
+      mac = iface_mac(bond->name);
+      memcpy(saddr_ll.sll_addr, mac, ETH_ALEN);
+      memcpy(buffer+ETH_ALEN, mac, ETH_ALEN);
+      free(mac);
+      // Set the bcidx
+      memcpy(buffer + (ETH_ALEN*2) + sizeof(uint16_t), &(bond->bcidx), sizeof(uint16_t));
+
+      /* /1* printf("Ethernet header\n"); *1/ */
+      /* printf("\nSending: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%d)\n\n", */
+      /*     buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
+      /*     buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
+      /*     ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO */
+      /*     buflen */
+      /* ); */
+
+      // Output to all interfaces
+      iface = bond->interfaces;
+      while(iface) {
+        if (iface->sockfd) {
+          saddr_ll.sll_ifindex = iface->ifidx;
+          send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
+          if (send_len < 0) {
+            perror("SENDTO");
+          }
+        }
+        iface = iface->next;
+      }
+      bond->bcidx = htons(ntohs(bond->bcidx)+1);
+      bond = bond->next;
+    }
+    usleep(10000); // 10ms
+  }
+
 
   // Wait for all bonds to finish
   bond = config->bonds;
