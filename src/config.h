@@ -4,6 +4,8 @@
 #include <pthread.h>
 #include <stdint.h>
 
+#include "tidwall/btree.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,7 +18,7 @@ extern "C" {
 struct pmlag_iface {
   void *next;              // linked-list next reference
   char *name;              // name of the interface this object represents
-  int   weight;            // weight of this interface within the bond
+  /* int   weight;            // weight of this interface within the bond */
   int   sockfd;            // file descriptor for the iface raw socket
   int   ifidx;             // index of the interface within the socket
   pthread_t tid;           // thread id where the iface listener recides in
@@ -31,7 +33,14 @@ struct pmlag_bond {
   uint16_t bcidx;                 // big-endian broadcast index for quickly detecting dead paths
   pthread_t tid;                  // thread id where the bond interface listener recides in
   pthread_mutex_t mtx_rt;         // lock for the routing table of the bond
+  struct btree *rt;               // pointer to the routing table
   struct pmlag_iface *interfaces; // linked-list of interfaces contained in the bond
+};
+
+struct pmlag_rt_entry {
+  unsigned char *mac;              // mac address of the remote entity
+  uint16_t bcidx;                  // broadcast index last seen from the mac
+  struct pmlag_iface **interfaces; // list of pointers to interfaces
 };
 
 struct pmlag_configuration {

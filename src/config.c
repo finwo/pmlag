@@ -63,17 +63,16 @@ static int config_load_handler(
       iface            = calloc(1, sizeof(struct pmlag_iface));
       iface->next      = bond->interfaces;
       iface->name      = strdup(value);
-      iface->weight    = 10;
+      /* iface->weight    = 10; */
       iface->bond      = bond;
       bond->interfaces = iface;
     }
 
-  } else if (!strcmp(name, "weight")) {
-    if (!iface) {
-      return 0;
-    }
-
-    iface->weight = atoi(value);
+  /* } else if (!strcmp(name, "weight")) { */
+  /*   if (!iface) { */
+  /*     return 0; */
+  /*   } */
+  /*   iface->weight = atoi(value); */
   } else {
     // Unknown key
     return 0;

@@ -1,3 +1,5 @@
+// vim: fdm=marker :
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <linux/if_ether.h>
@@ -13,6 +15,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "tidwall/btree.h"
 #include "cofyc/argparse.h"
 #include "config.h"
 #include "socket.h"
@@ -52,10 +55,14 @@ void * thread_iface(void *arg) {
   // Find bond socket iface_idx
   int send_len;
   uint16_t proto;
+  uint16_t bcidx;
+  struct pmlag_rt_entry *rt_entry;
+  int iface_list_len;
+  struct pmlag_iface *iface_list_entry;
 
   while(1) {
 
-    // Zero out buffer, to prevent pollution, & receive packet
+    // Zero out buffer, to prevent pollution, & receive packet {{{
     /* memset(buffer, 0, RCVBUFSIZ); */
     buflen = recvfrom(iface->sockfd, buffer, RCVBUFSIZ, 0, &saddr, (socklen_t *)&saddr_len);
     if (buflen < 0) {
@@ -63,11 +70,69 @@ void * thread_iface(void *arg) {
       pthread_exit(NULL);
       return NULL;
     }
+    // }}}
 
     // Update routing table if our custom protocol is seen
-    proto = ((uint16_t)((unsigned char)buffer[12]) << 8) + buffer[13];
+    proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1];
     if (proto == 0x0666) {
       pthread_mutex_lock(&(iface->bond->mtx_rt));
+      printf("RCV bc:\n");
+
+      // Fetch or build routing table entry {{{
+      rt_entry = btree_get(iface->bond->rt, &(struct pmlag_rt_entry){ .mac = (buffer+ETH_ALEN) });
+      if (!rt_entry) {
+        printf("  known mac\n");
+        // Build new entry
+        rt_entry = malloc(sizeof(struct pmlag_rt_entry));
+
+        // Insert the mac address
+        rt_entry->mac = malloc(ETH_ALEN);
+        memcpy(rt_entry->mac, buffer+ETH_ALEN, ETH_ALEN);
+
+        // Insert the bcidx
+        rt_entry->bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
+
+        // And an empty list of interfaces
+        rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+      } else {
+        printf("  new mac\n");
+      }
+      // }}}
+
+      // New bcidx = empty interface list {{{
+      bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
+      if (rt_entry->bcidx != bcidx) {
+        printf("  new bcidx\n");
+        free(rt_entry->interfaces);
+        rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+      } else {
+        printf("  new bcidx\n");
+      }
+      // }}}
+
+      // Add self to the list of interfaces {{{
+
+      // Fetch length of interfaces {{{
+      iface_list_len = 0;
+      iface_list_entry = rt_entry->interfaces[iface_list_len];
+      while(iface_list_entry) {
+        iface_list_entry = rt_entry->interfaces[++iface_list_len];
+      }
+      // }}}
+      // Realloc list to have the expanded length {{{
+      rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
+      // }}}
+      // Actually add receiving interface to the known interfaces for the mac address {{{
+      rt_entry->interfaces[iface_list_len  ] = iface;
+      rt_entry->interfaces[iface_list_len+1] = NULL;
+      // }}}
+
+      // }}}
+
+      // Save rt entry in the routing table again
+      btree_set(iface->bond->rt, rt_entry);
+      printf("\n");
+
       // TODO: update routing table
       pthread_mutex_unlock(&(iface->bond->mtx_rt));
       continue; // Don't forward the packet
@@ -190,6 +255,12 @@ void * thread_bond(void *arg) {
   return NULL;
 }
 
+static int compare_rt_entries(const void *a, const void *b, void *udata) {
+  struct pmlag_rt_entry *ta = (struct pmlag_rt_entry*)a;
+  struct pmlag_rt_entry *tb = (struct pmlag_rt_entry*)b;
+  return memcmp(ta->mac, tb->mac, ETH_ALEN);
+}
+
 int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
 
@@ -227,6 +298,8 @@ int main(int argc, const char **argv) {
       return 1;
     }
 
+    // Initialize routing table
+    bond->rt = btree_new(sizeof(void*), 0, compare_rt_entries, bond);
 
     // Start the bond's thread
     if(pthread_create(&(bond->tid), NULL, thread_bond, bond)) {
@@ -282,7 +355,8 @@ int main(int argc, const char **argv) {
       bond->bcidx = htons(ntohs(bond->bcidx)+1);
       bond = bond->next;
     }
-    usleep(10000); // 10ms
+    /* usleep(100000); // 100ms */
+    sleep(1);
   }
 
 
