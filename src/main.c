@@ -81,7 +81,7 @@ void * thread_iface(void *arg) {
       // Fetch or build routing table entry {{{
       rt_entry = btree_get(iface->bond->rt, &(struct pmlag_rt_entry){ .mac = (buffer+ETH_ALEN) });
       if (!rt_entry) {
-        printf("  known mac\n");
+        printf("  new mac\n");
         // Build new entry
         rt_entry = malloc(sizeof(struct pmlag_rt_entry));
 
@@ -95,7 +95,7 @@ void * thread_iface(void *arg) {
         // And an empty list of interfaces
         rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
       } else {
-        printf("  new mac\n");
+        printf("  known mac\n");
       }
       // }}}
 
@@ -106,7 +106,7 @@ void * thread_iface(void *arg) {
         free(rt_entry->interfaces);
         rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
       } else {
-        printf("  new bcidx\n");
+        printf("  known bcidx\n");
       }
       // }}}
 
