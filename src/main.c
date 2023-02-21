@@ -118,19 +118,23 @@ void * thread_iface(void *arg) {
       while(iface_list_entry) {
         iface_list_entry = rt_entry->interfaces[++iface_list_len];
       }
+      printf("  len before: %d\n", iface_list_len);
       // }}}
       // Realloc list to have the expanded length {{{
       rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
+      printf("  reallocated");
       // }}}
       // Actually add receiving interface to the known interfaces for the mac address {{{
       rt_entry->interfaces[iface_list_len  ] = iface;
       rt_entry->interfaces[iface_list_len+1] = NULL;
+      printf("  len after: %d\n", iface_list_len+1);
       // }}}
 
       // }}}
 
       // Save rt entry in the routing table again
       btree_set(iface->bond->rt, rt_entry);
+      printf("  saved to tree\n");
       printf("\n");
 
       // TODO: update routing table
