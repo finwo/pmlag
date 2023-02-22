@@ -268,6 +268,7 @@ void * thread_bond(void *arg) {
 
     // Select interface at random
     iface = rt_entry->interfaces[rand() % iface_list_len];
+    pthread_mutex_unlock(&(bond->mtx_rt));
 
     // Prepare saddr_ll for sendto
     saddr_ll.sll_ifindex = iface->ifidx;
@@ -280,8 +281,6 @@ void * thread_bond(void *arg) {
       /* pthread_exit(NULL); */
       /* return NULL; */
     }
-
-    pthread_mutex_unlock(&(bond->mtx_rt));
   }
 
   // Wait for iface threads to finish
