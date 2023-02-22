@@ -80,6 +80,7 @@ void iface_add_rt(struct pmlag_iface *iface, unsigned char *mac, uint16_t bcidx)
   while(iface_list_entry) {
     iface_list_entry = rt_entry->interfaces[++iface_list_len];
   }
+
   /* printf("  len before: %d\n", iface_list_len); */
   rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
   /* printf("  reallocated\n"); */
@@ -207,6 +208,10 @@ void * thread_bond(void *arg) {
   struct sockaddr_ll saddr_ll;
   saddr_ll.sll_halen = ETH_ALEN;
 
+  struct pmlag_rt_entry *rt_entry;
+  int iface_list_len;
+  struct pmlag_iface *iface_list_entry;
+
   sleep(1);
 
   while(1) {
@@ -230,9 +235,39 @@ void * thread_bond(void *arg) {
         buflen
     );
 
-    // Select interface from routing table
-    // DEBUG: only the first iface
-    iface = bond->interfaces;
+    // Insert destination MAC into saddr_ll
+    memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN);
+
+    // Fetch entry from routing table
+    pthread_mutex_lock(&(bond->mtx_rt));
+    rt_entry = btree_get(bond->rt, &(struct pmlag_rt_entry){ .mac = buffer });
+
+    // Broadcast on ALL interfaces if no rt entry OR broadcast packet
+    if ((!rt_entry) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) {
+      pthread_mutex_unlock(&(bond->mtx_rt));
+      iface = bond->interfaces;
+      while(iface) {
+        saddr_ll.sll_ifindex = iface->ifidx;
+        send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
+        if(send_len != buflen) {
+          perror("sendto");
+          /* pthread_exit(NULL); */
+          /* return NULL; */
+        }
+        iface = iface->next;
+      }
+      continue;
+    }
+
+    // Fetch length of interface list
+    iface_list_len = 0;
+    iface_list_entry = rt_entry->interfaces[iface_list_len];
+    while(iface_list_entry) {
+      iface_list_entry = rt_entry->interfaces[++iface_list_len];
+    }
+
+    // Select interface at random
+    iface = rt_entry->interfaces[rand() % iface_list_len];
 
     // Prepare saddr_ll for sendto
     saddr_ll.sll_ifindex = iface->ifidx;
@@ -247,11 +282,6 @@ void * thread_bond(void *arg) {
     }
 
   }
-
-  // TODO: send through routing table to other ifaces
-  // TODO: send broadcasts to all interfaces
-  // TODO: timer to broadcast announce our presence to ifaces (vrrp-ish)
-  //          hint: include sequence id, so tracking can react quickly (seq dist > 1)
 
   // Wait for iface threads to finish
   iface = bond->interfaces;
