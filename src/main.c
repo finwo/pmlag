@@ -1,4 +1,4 @@
-// vim: fdm=marker :
+// vim: fdm=marker
 
 #include <arpa/inet.h>
 #include <errno.h>
@@ -76,12 +76,12 @@ void * thread_iface(void *arg) {
     proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1];
     if (proto == 0x0666) {
       pthread_mutex_lock(&(iface->bond->mtx_rt));
-      printf("RCV bc:\n");
+      /* printf("RCV bc: %s\n", iface->name); */
 
       // Fetch or build routing table entry {{{
       rt_entry = btree_get(iface->bond->rt, &(struct pmlag_rt_entry){ .mac = (buffer+ETH_ALEN) });
       if (!rt_entry) {
-        printf("  new mac\n");
+        /* printf("  new mac\n"); */
         // Build new entry
         rt_entry = malloc(sizeof(struct pmlag_rt_entry));
 
@@ -95,18 +95,19 @@ void * thread_iface(void *arg) {
         // And an empty list of interfaces
         rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
       } else {
-        printf("  known mac\n");
+        /* printf("  known mac\n"); */
       }
       // }}}
 
       // New bcidx = empty interface list {{{
       bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
       if (rt_entry->bcidx != bcidx) {
-        printf("  new bcidx\n");
+        /* printf("  new bcidx  %d -> %d\n", rt_entry->bcidx, bcidx); */
         free(rt_entry->interfaces);
         rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+        rt_entry->bcidx = bcidx;
       } else {
-        printf("  known bcidx\n");
+        /* printf("  known bcidx\n"); */
       }
       // }}}
 
@@ -118,24 +119,24 @@ void * thread_iface(void *arg) {
       while(iface_list_entry) {
         iface_list_entry = rt_entry->interfaces[++iface_list_len];
       }
-      printf("  len before: %d\n", iface_list_len);
+      /* printf("  len before: %d\n", iface_list_len); */
       // }}}
       // Realloc list to have the expanded length {{{
       rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
-      printf("  reallocated");
+      /* printf("  reallocated"); */
       // }}}
       // Actually add receiving interface to the known interfaces for the mac address {{{
       rt_entry->interfaces[iface_list_len  ] = iface;
       rt_entry->interfaces[iface_list_len+1] = NULL;
-      printf("  len after: %d\n", iface_list_len+1);
+      /* printf("  len after: %d\n", iface_list_len+1); */
       // }}}
 
       // }}}
 
       // Save rt entry in the routing table again
       btree_set(iface->bond->rt, rt_entry);
-      printf("  saved to tree\n");
-      printf("\n");
+      /* printf("  saved to tree\n"); */
+      /* printf("\n"); */
 
       // TODO: update routing table
       pthread_mutex_unlock(&(iface->bond->mtx_rt));
