@@ -281,6 +281,7 @@ void * thread_bond(void *arg) {
       /* return NULL; */
     }
 
+    pthread_mutex_unlock(&(bond->mtx_rt));
   }
 
   // Wait for iface threads to finish
