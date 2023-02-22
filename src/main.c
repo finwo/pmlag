@@ -357,7 +357,7 @@ int main(int argc, const char **argv) {
         }
         iface = iface->next;
       }
-      bond->bcidx = htons(ntohs(bond->bcidx)+1);
+      bond->bcidx = htons((ntohs(bond->bcidx)+1)|1);
       bond = bond->next;
     }
     /* usleep(100000); // 100ms */
