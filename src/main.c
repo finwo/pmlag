@@ -27,6 +27,74 @@ static const char *const usage[] = {
   NULL
 };
 
+void iface_add_rt(struct pmlag_iface *iface, unsigned char *mac, uint16_t bcidx) {
+  struct pmlag_rt_entry *rt_entry;
+  int iface_list_len;
+  struct pmlag_iface *iface_list_entry;
+
+  pthread_mutex_lock(&(iface->bond->mtx_rt));
+  /* printf("\nRCV bc: %s\n", iface->name); */
+
+  // Fetch or build rt entry
+  rt_entry = btree_get(iface->bond->rt, &(struct pmlag_rt_entry){ .mac = mac });
+  if (!rt_entry) {
+    /* printf("  new mac\n"); */
+    // Build new entry
+    rt_entry = malloc(sizeof(struct pmlag_rt_entry));
+    rt_entry->bcidx = 0;
+
+    // Insert the mac address
+    rt_entry->mac = malloc(ETH_ALEN);
+    memcpy(rt_entry->mac, mac, ETH_ALEN);
+
+    // And an empty list of interfaces
+    rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+  } else {
+    /* printf("  known mac\n"); */
+  }
+
+  // Bail if we receive a regular packet on an interface with bcidx
+  if (!bcidx && rt_entry->bcidx) {
+    /* printf("  bail, regular packet on pmlag remote\n"); */
+    pthread_mutex_unlock(&(iface->bond->mtx_rt));
+    return;
+  }
+
+  // Clear list of known interfaces if
+  if (
+    (bcidx && (rt_entry->bcidx != bcidx)) || // We got a NEW broadcast index
+    (!bcidx && (rt_entry->bcidx == 0))       // Or we're updating a non-pmlag remote
+  ) {
+    free(rt_entry->interfaces);
+    rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+    rt_entry->bcidx = bcidx;
+    /* printf("  clear interface list\n"); */
+  } else {
+    // Don't track the interface
+    /* printf("  keep interface list\n"); */
+  }
+
+  // Add given interface to the entry's interface list
+  iface_list_len = 0;
+  iface_list_entry = rt_entry->interfaces[iface_list_len];
+  while(iface_list_entry) {
+    iface_list_entry = rt_entry->interfaces[++iface_list_len];
+  }
+  /* printf("  len before: %d\n", iface_list_len); */
+  rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
+  /* printf("  reallocated\n"); */
+  rt_entry->interfaces[iface_list_len  ] = iface;
+  rt_entry->interfaces[iface_list_len+1] = NULL;
+  /* printf("  len after: %d\n", iface_list_len+1); */
+
+  // Save rt entry in the routing table again
+  btree_set(iface->bond->rt, rt_entry);
+  /* printf("  saved to tree\n"); */
+  /* printf("\n"); */
+
+  pthread_mutex_unlock(&(iface->bond->mtx_rt));
+}
+
 void * thread_iface(void *arg) {
   struct pmlag_iface *iface = (struct pmlag_iface *)arg;
 
@@ -56,9 +124,6 @@ void * thread_iface(void *arg) {
   int send_len;
   uint16_t proto;
   uint16_t bcidx;
-  struct pmlag_rt_entry *rt_entry;
-  int iface_list_len;
-  struct pmlag_iface *iface_list_entry;
 
   while(1) {
 
@@ -72,83 +137,22 @@ void * thread_iface(void *arg) {
     }
     // }}}
 
-    // Update routing table if our custom protocol is seen
-    proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1];
-    if (proto == 0x0666) {
-      pthread_mutex_lock(&(iface->bond->mtx_rt));
-      /* printf("RCV bc: %s\n", iface->name); */
-
-      // Fetch or build routing table entry {{{
-      rt_entry = btree_get(iface->bond->rt, &(struct pmlag_rt_entry){ .mac = (buffer+ETH_ALEN) });
-      if (!rt_entry) {
-        /* printf("  new mac\n"); */
-        // Build new entry
-        rt_entry = malloc(sizeof(struct pmlag_rt_entry));
-
-        // Insert the mac address
-        rt_entry->mac = malloc(ETH_ALEN);
-        memcpy(rt_entry->mac, buffer+ETH_ALEN, ETH_ALEN);
-
-        // Insert the bcidx
-        rt_entry->bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
-
-        // And an empty list of interfaces
-        rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
-      } else {
-        /* printf("  known mac\n"); */
-      }
-      // }}}
-
-      // New bcidx = empty interface list {{{
-      bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
-      if (rt_entry->bcidx != bcidx) {
-        /* printf("  new bcidx  %d -> %d\n", rt_entry->bcidx, bcidx); */
-        free(rt_entry->interfaces);
-        rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
-        rt_entry->bcidx = bcidx;
-      } else {
-        /* printf("  known bcidx\n"); */
-      }
-      // }}}
-
-      // Add self to the list of interfaces {{{
-
-      // Fetch length of interfaces {{{
-      iface_list_len = 0;
-      iface_list_entry = rt_entry->interfaces[iface_list_len];
-      while(iface_list_entry) {
-        iface_list_entry = rt_entry->interfaces[++iface_list_len];
-      }
-      /* printf("  len before: %d\n", iface_list_len); */
-      // }}}
-      // Realloc list to have the expanded length {{{
-      rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
-      /* printf("  reallocated"); */
-      // }}}
-      // Actually add receiving interface to the known interfaces for the mac address {{{
-      rt_entry->interfaces[iface_list_len  ] = iface;
-      rt_entry->interfaces[iface_list_len+1] = NULL;
-      /* printf("  len after: %d\n", iface_list_len+1); */
-      // }}}
-
-      // }}}
-
-      // Save rt entry in the routing table again
-      btree_set(iface->bond->rt, rt_entry);
-      /* printf("  saved to tree\n"); */
-      /* printf("\n"); */
-
-      // TODO: update routing table
-      pthread_mutex_unlock(&(iface->bond->mtx_rt));
-      continue; // Don't forward the packet
-    }
-
     printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x < %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%d)\n",
         buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST
         buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC
         ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO
         buflen
     );
+
+    // Update routing table if our custom protocol is seen
+    proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1];
+    if (proto == 0x0666) {
+      bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
+      iface_add_rt(iface, buffer+ETH_ALEN, bcidx);
+      continue;
+    } else {
+      iface_add_rt(iface, buffer+ETH_ALEN, 0);
+    }
 
     // Redirect packet to bond socket as-is
     send_len = write(iface->bond->sockfd, buffer, buflen);
@@ -337,7 +341,7 @@ int main(int argc, const char **argv) {
       // Set the bcidx
       memcpy(buffer + (ETH_ALEN*2) + sizeof(uint16_t), &(bond->bcidx), sizeof(uint16_t));
 
-      /* /1* printf("Ethernet header\n"); *1/ */
+      /* printf("Ethernet header\n"); */
       /* printf("\nSending: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%d)\n\n", */
       /*     buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
       /*     buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
