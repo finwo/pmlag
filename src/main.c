@@ -27,13 +27,17 @@ static const char *const usage[] = {
   NULL
 };
 
+void trim_rt(struct pmlag_bond *bond, size_t limit) {
+
+}
+
 void iface_add_rt(struct pmlag_iface *iface, unsigned char *mac, uint16_t bcidx) {
   struct pmlag_rt_entry *rt_entry;
   int iface_list_len;
   struct pmlag_iface *iface_list_entry;
 
   pthread_mutex_lock(&(iface->bond->mtx_rt));
-  /* printf("\nRCV bc: %s\n", iface->name); */
+  printf("\nRCV bc: %s\n", iface->name);
 
   // Fetch or build rt entry
   rt_entry = btree_get(iface->bond->rt, &(struct pmlag_rt_entry){ .mac = mac });
@@ -41,14 +45,15 @@ void iface_add_rt(struct pmlag_iface *iface, unsigned char *mac, uint16_t bcidx)
     /* printf("  new mac\n"); */
     // Build new entry
     rt_entry = malloc(sizeof(struct pmlag_rt_entry));
-    rt_entry->bcidx = 0;
+    bzero(rt_entry, sizeof(struct pmlag_rt_entry));
+    /* rt_entry->bcidx = 0; */
 
     // Insert the mac address
     rt_entry->mac = malloc(ETH_ALEN);
     memcpy(rt_entry->mac, mac, ETH_ALEN);
 
-    // And an empty list of interfaces
-    rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+    /* // And an empty list of interfaces */
+    /* rt_entry->interfaces = NULL; */
   } else {
     /* printf("  known mac\n"); */
   }
@@ -61,12 +66,22 @@ void iface_add_rt(struct pmlag_iface *iface, unsigned char *mac, uint16_t bcidx)
   }
 
   // Clear list of known interfaces if
+  pmlag_iface_llist *iface_entry;
   if (
     (bcidx && (rt_entry->bcidx != bcidx)) || // We got a NEW broadcast index
     (!bcidx && (rt_entry->bcidx == 0))       // Or we're updating a non-pmlag remote
   ) {
-    free(rt_entry->interfaces);
-    rt_entry->interfaces = calloc(1, sizeof(struct pm_rt_entry *));
+    // Free list 1-by-1
+    while(rt_entry->interfaces) {
+      printf("FREE LINE %d (%p)\n", __LINE__, iface_entry);
+      printf("FREE LINE %d (%p)\n", __LINE__, rt_entry->interfaces);
+      iface_entry = rt_entry->interfaces;
+      printf("FREE LINE %d (%p)\n", __LINE__, iface_entry);
+      printf("FREE LINE %d (%p)\n", __LINE__, iface_entry->next);
+      rt_entry->interfaces = iface_entry->next;
+      printf("FREE LINE %d (%p)\n", __LINE__, iface_entry);
+      free(iface_entry);
+    }
     rt_entry->bcidx = bcidx;
     /* printf("  clear interface list\n"); */
   } else {
@@ -75,18 +90,23 @@ void iface_add_rt(struct pmlag_iface *iface, unsigned char *mac, uint16_t bcidx)
   }
 
   // Add given interface to the entry's interface list
-  iface_list_len = 0;
-  iface_list_entry = rt_entry->interfaces[iface_list_len];
-  while(iface_list_entry) {
-    iface_list_entry = rt_entry->interfaces[++iface_list_len];
-  }
+  iface_entry = malloc(sizeof(pmlag_iface_llist));
+  iface_entry->next = rt_entry->interfaces;
+  iface_entry->data = iface;
+  rt_entry->interfaces = iface_entry;
 
-  /* printf("  len before: %d\n", iface_list_len); */
-  rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *));
-  /* printf("  reallocated\n"); */
-  rt_entry->interfaces[iface_list_len  ] = iface;
-  rt_entry->interfaces[iface_list_len+1] = NULL;
-  /* printf("  len after: %d\n", iface_list_len+1); */
+  /* iface_list_len = 0; */
+  /* iface_list_entry = rt_entry->interfaces[iface_list_len]; */
+  /* while(iface_list_entry) { */
+  /*   iface_list_entry = rt_entry->interfaces[++iface_list_len]; */
+  /* } */
+
+  /* /1* printf("  len before: %d\n", iface_list_len); *1/ */
+  /* rt_entry->interfaces = realloc(rt_entry->interfaces, (iface_list_len+2) * sizeof(struct pm_rt_entry *)); */
+  /* /1* printf("  reallocated\n"); *1/ */
+  /* rt_entry->interfaces[iface_list_len  ] = iface; */
+  /* rt_entry->interfaces[iface_list_len+1] = NULL; */
+  /* /1* printf("  len after: %d\n", iface_list_len+1); *1/ */
 
   // Save rt entry in the routing table again
   btree_set(iface->bond->rt, rt_entry);
@@ -126,6 +146,8 @@ void * thread_iface(void *arg) {
   uint16_t proto;
   uint16_t bcidx;
 
+  size_t rt_len;
+
   while(1) {
 
     // Zero out buffer, to prevent pollution, & receive packet {{{
@@ -155,6 +177,10 @@ void * thread_iface(void *arg) {
       iface_add_rt(iface, buffer+ETH_ALEN, 0);
     }
 
+    /* trim_rt(iface->bond, */ 
+    rt_len = btree_count(iface->bond->rt);
+    printf("Current RT length: %ld\n", rt_len);
+
     // Redirect packet to bond socket as-is
     send_len = write(iface->bond->sockfd, buffer, buflen);
     if (buflen != send_len) {
@@ -176,6 +202,7 @@ void * thread_bond(void *arg) {
   // Assign bond interface
   unsigned char *mac = iface_mac(bond->interfaces->name);
   bond->sockfd = tap_alloc(bond->name, mac);
+  printf("FREE LINE %d (%p)\n", __LINE__, mac);
   free(mac);
   if (bond->sockfd < 0) {
     perror("Allocating bond interface");
@@ -210,7 +237,8 @@ void * thread_bond(void *arg) {
 
   struct pmlag_rt_entry *rt_entry;
   int iface_list_len;
-  struct pmlag_iface *iface_list_entry;
+  int iface_list_sel;
+  pmlag_iface_llist *iface_list_entry;
 
   sleep(1);
 
@@ -261,13 +289,19 @@ void * thread_bond(void *arg) {
 
     // Fetch length of interface list
     iface_list_len = 0;
-    iface_list_entry = rt_entry->interfaces[iface_list_len];
+    iface_list_entry = rt_entry->interfaces;
     while(iface_list_entry) {
-      iface_list_entry = rt_entry->interfaces[++iface_list_len];
+      iface_list_len++;
+      iface_list_entry = iface_list_entry->next;
     }
 
     // Select interface at random
-    iface = rt_entry->interfaces[rand() % iface_list_len];
+    iface_list_sel = rand() % iface_list_len;
+    iface_list_entry = rt_entry->interfaces;
+    while(iface_list_sel--) iface_list_entry = iface_list_entry->next;
+    iface = iface_list_entry->data;
+
+    // Unlock routing table
     pthread_mutex_unlock(&(bond->mtx_rt));
 
     // Prepare saddr_ll for sendto
@@ -367,6 +401,7 @@ int main(int argc, const char **argv) {
       mac = iface_mac(bond->name);
       memcpy(saddr_ll.sll_addr, mac, ETH_ALEN);
       memcpy(buffer+ETH_ALEN, mac, ETH_ALEN);
+      printf("FREE LINE %d (%p)\n", __LINE__, mac);
       free(mac);
       // Set the bcidx
       memcpy(buffer + (ETH_ALEN*2) + sizeof(uint16_t), &(bond->bcidx), sizeof(uint16_t));

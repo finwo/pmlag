@@ -15,6 +15,10 @@ extern "C" {
 #define PMLAG_MODE_BROADCAST     2
 #define PMLAG_MODE_BALANCED_RR   3
 
+#define LLIST(x)   struct { void *next; x *data; }
+
+typedef LLIST(struct pmlag_iface) pmlag_iface_llist;
+
 struct pmlag_iface {
   void *next;              // linked-list next reference
   char *name;              // name of the interface this object represents
@@ -38,9 +42,9 @@ struct pmlag_bond {
 };
 
 struct pmlag_rt_entry {
-  unsigned char *mac;              // mac address of the remote entity
-  uint16_t bcidx;                  // broadcast index last seen from the mac
-  struct pmlag_iface **interfaces; // list of pointers to interfaces
+  unsigned char *mac;                    // mac address of the remote entity
+  uint16_t bcidx;                        // broadcast index last seen from the mac
+  pmlag_iface_llist *interfaces; // list of pointers to interfaces
 };
 
 struct pmlag_configuration {
@@ -48,6 +52,7 @@ struct pmlag_configuration {
 };
 
 struct pmlag_configuration * config_load(const char * filename);
+
 
 #ifdef __cplusplus
 } // extern "C"
