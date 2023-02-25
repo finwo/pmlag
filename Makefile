@@ -1,6 +1,8 @@
 # Initial config
 LIBS=
-SRC=$(wildcard src/*.c)
+SRC:=
+SRC+=$(wildcard src/*.c)
+SRC+=$(wildcard src/*/*.c)
 
 override CFLAGS?=-Wall -g
 
