@@ -53,7 +53,6 @@ struct pmlag_configuration {
 
 struct pmlag_configuration * config_load(const char * filename);
 
-
 #ifdef __cplusplus
 } // extern "C"
 #endif
