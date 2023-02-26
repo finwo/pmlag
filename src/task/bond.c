@@ -129,7 +129,7 @@ void * task_bond_thread(void *arg) {
   return NULL;
 }
 
-void * thread_bond_old(void *arg) {
+/* void * thread_bond_old(void *arg) { */
 /*   struct pmlag_rt_entry *rt_entry; */
 /*   int iface_list_len; */
 /*   int iface_list_sel; */
@@ -198,6 +198,6 @@ void * thread_bond_old(void *arg) {
   /*   iface = iface->next; */
   /* } */
 
-  pthread_exit(NULL);
-  return NULL;
-}
+  /* pthread_exit(NULL); */
+  /* return NULL; */
+/* } */
