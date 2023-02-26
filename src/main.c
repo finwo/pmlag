@@ -22,8 +22,6 @@
 #include "task/bond.h"
 /* #include "socket.h" */
 
-#define RCVBUFSIZ 65536
-
 static const char *const usage[] = {
   __NAME " [options]",
   NULL
@@ -118,223 +116,7 @@ static const char *const usage[] = {
 /*   pthread_mutex_unlock(&(iface->bond->mtx_rt)); */
 /* } */
 
-/* void * thread_iface(void *arg) { */
-/*   struct pmlag_iface *iface = (struct pmlag_iface *)arg; */
 
-/*   // Open socket for the interface in the bond */
-/*   iface->sockfd = sockraw_open(iface->name); */
-/*   if (iface->sockfd < 0) { */
-/*     pthread_exit(NULL); */
-/*     return NULL; */
-/*   } */
-
-/*   // Reserve receive buffer, support 64k packets just in case */
-/*   int buflen; */
-/*   unsigned char *buffer = (unsigned char *) malloc(RCVBUFSIZ); */
-/*   struct sockaddr saddr; */
-/*   int saddr_len  = sizeof(saddr); */
-
-/*   // Get the interface's idx on the socket */
-/*   iface->ifidx = iface_idx(iface->sockfd, iface->name); */
-
-/*   /1* printf("Thread started for iface: %s->%s(%d)\n", iface->bond->name, iface->name, iface->sockfd); *1/ */
-
-/*   // Wait for the bond thread to finish initializing */
-/*   pthread_mutex_lock(&(iface->bond->mtx_rt)); */
-/*   pthread_mutex_unlock(&(iface->bond->mtx_rt)); */
-
-/*   // Find bond socket iface_idx */
-/*   int send_len; */
-/*   uint16_t proto; */
-/*   uint16_t bcidx; */
-
-/*   size_t rt_len; */
-
-/*   while(1) { */
-
-/*     // Zero out buffer, to prevent pollution, & receive packet {{{ */
-/*     /1* memset(buffer, 0, RCVBUFSIZ); *1/ */
-/*     buflen = recvfrom(iface->sockfd, buffer, RCVBUFSIZ, 0, &saddr, (socklen_t *)&saddr_len); */
-/*     if (buflen < 0) { */
-/*       perror("recvfrom"); */
-/*       pthread_exit(NULL); */
-/*       return NULL; */
-/*     } */
-/*     // }}} */
-
-/*     printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x < %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%d)\n", */
-/*         buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
-/*         buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
-/*         ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO */
-/*         buflen */
-/*     ); */
-
-/*     // Update routing table if our custom protocol is seen */
-/*     proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1]; */
-/*     if (proto == 0x0666) { */
-/*       bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3]; */
-/*       iface_add_rt(iface, buffer+ETH_ALEN, bcidx); */
-/*       continue; */
-/*     } else { */
-/*       iface_add_rt(iface, buffer+ETH_ALEN, 0); */
-/*     } */
-
-/*     /1* trim_rt(iface->bond, *1/ */ 
-/*     rt_len = btree_count(iface->bond->rt); */
-/*     printf("Current RT length: %ld\n", rt_len); */
-
-/*     // Redirect packet to bond socket as-is */
-/*     send_len = write(iface->bond->sockfd, buffer, buflen); */
-/*     if (buflen != send_len) { */
-/*       perror("write(bond)"); */
-/*       /1* pthread_exit(NULL); *1/ */
-/*       /1* return NULL; *1/ */
-/*     } */
-
-/*   } */
-
-/*   pthread_exit(NULL); */
-/*   return NULL; */
-/* } */
-
-/* void * thread_bond(void *arg) { */
-/*   struct pmlag_bond *bond = (struct pmlag_bond *)arg; */
-/*   /1* printf("Thread started for bond: %s\n", bond->name); *1/ */
-
-/*   // Assign bond interface */
-/*   unsigned char *mac = iface_mac(bond->interfaces->name); */
-/*   bond->sockfd = tap_alloc(bond->name, mac); */
-/*   printf("FREE LINE %d (%p)\n", __LINE__, mac); */
-/*   free(mac); */
-/*   if (bond->sockfd < 0) { */
-/*     perror("Allocating bond interface"); */
-/*     pthread_exit(NULL); */
-/*     return NULL; */
-/*   }; */
-
-/*   // Lock this bond's routing table */
-/*   pthread_mutex_lock(&(bond->mtx_rt)); */
-
-/*   // Start thread for each interface of this bond */
-/*   struct pmlag_iface *iface = bond->interfaces; */
-/*   while(iface) { */
-/*     if(pthread_create(&(iface->tid), NULL, thread_iface, iface)) { */
-/*       perror("Starting iface thread"); */
-/*       pthread_exit((void*)1); */
-/*       return (void*)1; */
-/*     } */
-/*     iface = iface->next; */
-/*   } */
-
-/*   // Give iface threads time to run into the lock */
-/*   /1* sleep(1); *1/ */
-
-/*   // Free this bond's routing table */
-/*   pthread_mutex_unlock(&(bond->mtx_rt)); */
-
-/*   int buflen, send_len; */
-/*   unsigned char *buffer = (unsigned char *) malloc(RCVBUFSIZ); */
-/*   struct sockaddr_ll saddr_ll; */
-/*   saddr_ll.sll_halen = ETH_ALEN; */
-
-/*   struct pmlag_rt_entry *rt_entry; */
-/*   int iface_list_len; */
-/*   int iface_list_sel; */
-/*   pmlag_iface_llist *iface_list_entry; */
-
-/*   sleep(1); */
-
-/*   while(1) { */
-/*     /1* sleep(1); *1/ */
-
-/*     buflen = read(bond->sockfd, buffer, RCVBUFSIZ); */
-/*     if (buflen < 0) { */
-/*       perror("read(bond)"); */
-/*       pthread_exit(NULL); */
-/*       return NULL; */
-/*     } */
-
-/*     /1* printf("\n"); *1/ */
-/*     /1* printf("Got packet: %d bytes\n", buflen); *1/ */
-
-/*     /1* printf("Ethernet header\n"); *1/ */
-/*     printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%d)\n", */
-/*         buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
-/*         buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
-/*         ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO */
-/*         buflen */
-/*     ); */
-
-/*     // Insert destination MAC into saddr_ll */
-/*     memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN); */
-
-/*     // Fetch entry from routing table */
-/*     pthread_mutex_lock(&(bond->mtx_rt)); */
-/*     rt_entry = btree_get(bond->rt, &(struct pmlag_rt_entry){ .mac = buffer }); */
-
-/*     // Broadcast on ALL interfaces if no rt entry OR broadcast packet */
-/*     if ((!rt_entry) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) { */
-/*       pthread_mutex_unlock(&(bond->mtx_rt)); */
-/*       iface = bond->interfaces; */
-/*       while(iface) { */
-/*         saddr_ll.sll_ifindex = iface->ifidx; */
-/*         send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)); */
-/*         if(send_len != buflen) { */
-/*           perror("sendto"); */
-/*           /1* pthread_exit(NULL); *1/ */
-/*           /1* return NULL; *1/ */
-/*         } */
-/*         iface = iface->next; */
-/*       } */
-/*       continue; */
-/*     } */
-
-/*     // Fetch length of interface list */
-/*     iface_list_len = 0; */
-/*     iface_list_entry = rt_entry->interfaces; */
-/*     while(iface_list_entry) { */
-/*       iface_list_len++; */
-/*       iface_list_entry = iface_list_entry->next; */
-/*     } */
-
-/*     // Select interface at random */
-/*     iface_list_sel = rand() % iface_list_len; */
-/*     iface_list_entry = rt_entry->interfaces; */
-/*     while(iface_list_sel--) iface_list_entry = iface_list_entry->next; */
-/*     iface = iface_list_entry->data; */
-
-/*     // Unlock routing table */
-/*     pthread_mutex_unlock(&(bond->mtx_rt)); */
-
-/*     // Prepare saddr_ll for sendto */
-/*     saddr_ll.sll_ifindex = iface->ifidx; */
-/*     memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN); */
-
-/*     // Forward packet to iface as-is */
-/*     send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)); */
-/*     if(send_len != buflen) { */
-/*       perror("sendto"); */
-/*       /1* pthread_exit(NULL); *1/ */
-/*       /1* return NULL; *1/ */
-/*     } */
-/*   } */
-
-/*   // Wait for iface threads to finish */
-/*   iface = bond->interfaces; */
-/*   while(iface) { */
-/*     pthread_join(iface->tid, NULL); */
-/*     iface = iface->next; */
-/*   } */
-
-/*   pthread_exit(NULL); */
-/*   return NULL; */
-/* } */
-
-/* static int compare_rt_entries(const void *a, const void *b, void *udata) { */
-/*   struct pmlag_rt_entry *ta = (struct pmlag_rt_entry*)a; */
-/*   struct pmlag_rt_entry *tb = (struct pmlag_rt_entry*)b; */
-/*   return memcmp(ta->mac, tb->mac, ETH_ALEN); */
-/* } */
 
 int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
@@ -357,8 +139,6 @@ int main(int argc, const char **argv) {
   );
   argc = argparse_parse(&argparse, argc, argv);
 
-  printf("config file: %s\n", config_file);
-
   // Load configuration file
   struct pmlag_configuration *config = config_load(config_file);
   if (!config) {
@@ -368,15 +148,6 @@ int main(int argc, const char **argv) {
   // Initialize interfaces for all configured bonds
   struct pmlag_bond *bond = config->bonds;
   while(bond) {
-
-  /*   // Initialize routing table lock */
-  /*   if (pthread_mutex_init(&(bond->mtx_rt), NULL) != 0) { */
-  /*     perror("Initializing mutex for bond"); */
-  /*     return 1; */
-  /*   } */
-
-  /*   // Initialize routing table */
-  /*   bond->rt = btree_new(sizeof(void*), 0, compare_rt_entries, bond); */
 
     // Start the bond's thread
     if(pthread_create(&(bond->tid), NULL, task_bond_thread, bond)) {

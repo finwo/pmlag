@@ -31,7 +31,7 @@ static int config_load_handler(
   }
 
   // Get interface being configured
-  struct pmlag_iface *iface = bond->interfaces;
+  pmlag_iface_llist *iface_entry = bond->interfaces;
 
   if (0) {
     // Intentionally empty
@@ -51,28 +51,25 @@ static int config_load_handler(
   } else if (!strcmp(name, "interface")) {
 
     // Select the right interface
-    while(iface) {
-      if (!strcmp(iface->name, value)) {
+    while(iface_entry) {
+      if (!strcmp(iface_entry->data->name, value)) {
         break;
       }
-      iface = iface->next;
+      iface_entry = iface_entry->next;
     }
 
     // Create iface if not found
-    if (!iface) {
-      iface            = calloc(1, sizeof(struct pmlag_iface));
-      iface->next      = bond->interfaces;
-      iface->name      = strdup(value);
-      /* iface->weight    = 10; */
-      iface->bond      = bond;
-      bond->interfaces = iface;
+    if (!iface_entry) {
+      // Create the list entry
+      iface_entry = calloc(1, sizeof(pmlag_iface_llist));
+      iface_entry->next = bond->interfaces;
+      bond->interfaces  = iface_entry;
+      // Create the iface
+      iface_entry->data       = calloc(1, sizeof(struct pmlag_iface));
+      iface_entry->data->name = strdup(value);
+      iface_entry->data->bond = bond;
     }
 
-  /* } else if (!strcmp(name, "weight")) { */
-  /*   if (!iface) { */
-  /*     return 0; */
-  /*   } */
-  /*   iface->weight = atoi(value); */
   } else {
     // Unknown key
     return 0;
