@@ -8,8 +8,8 @@
 #include "routing-table.h"
 
 static int compare_rt_entries(const void *a, const void *b, void *udata) {
-  struct pmlag_rt_entry *ta = (struct pmlag_rt_entry*)a;
-  struct pmlag_rt_entry *tb = (struct pmlag_rt_entry*)b;
+  struct pmlag_rt_entry *ta = (struct pmlag_rt_entry *)a;
+  struct pmlag_rt_entry *tb = (struct pmlag_rt_entry *)b;
   return memcmp(ta->mac, tb->mac, ETH_ALEN);
 }
 
@@ -27,7 +27,7 @@ int rt_upsert(
   int isnew  = 0;
   struct pmlag_rt_entry *rt_entry;
 
-  printf("\nUpserting RT\n");
+  printf("\nUpserting RT, %d\n", bcidx);
 
   // Lock the routing table
   pthread_mutex_lock(mtx);
@@ -35,10 +35,16 @@ int rt_upsert(
   // Attempt to fetch the rt entry
   rt_entry = btree_get(rt, &(struct pmlag_rt_entry){ .mac = mac });
 
+  if (rt_entry) {
+    printf("  Found, %d\n", rt_entry->bcidx);
+  }
+
   // None given, build new one
   if (!rt_entry) {
-    rt_entry = calloc(1, sizeof(struct pmlag_rt_entry));
-    rt_entry->mac = malloc(ETH_ALEN);
+    rt_entry             = malloc(sizeof(struct pmlag_rt_entry));
+    rt_entry->mac        = malloc(ETH_ALEN);
+    rt_entry->bcidx      = 0;
+    rt_entry->interfaces = NULL;
     memcpy(rt_entry->mac, mac, ETH_ALEN);
     isnew = 1;
   }
@@ -48,7 +54,7 @@ int rt_upsert(
       (!bcidx && rt_entry->bcidx) ||  // We receive a regular packet on bcidx-tracked entry
       ((bcidx - rt_entry->bcidx) < 0) // Or the received bcidx is lower than known (old packet)
   ) {
-    printf("  Bail\n\n");
+    printf("  Bail, %d, %d\n\n", bcidx, rt_entry->bcidx);
     pthread_mutex_unlock(&(iface->bond->mtx_rt));
     return 0;
   }
