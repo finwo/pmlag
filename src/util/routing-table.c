@@ -1,4 +1,5 @@
 #include <linux/if_ether.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,6 +27,8 @@ int rt_upsert(
   int isnew  = 0;
   struct pmlag_rt_entry *rt_entry;
 
+  printf("\nUpserting RT\n");
+
   // Lock the routing table
   pthread_mutex_lock(mtx);
 
@@ -45,6 +48,7 @@ int rt_upsert(
       (!bcidx && rt_entry->bcidx) ||  // We receive a regular packet on bcidx-tracked entry
       ((bcidx - rt_entry->bcidx) < 0) // Or the received bcidx is lower than known (old packet)
   ) {
+    printf("  Bail\n\n");
     pthread_mutex_unlock(&(iface->bond->mtx_rt));
     return 0;
   }
@@ -75,8 +79,11 @@ int rt_upsert(
   // Save rt entry in the routing table if it's new
   // A pre-existing one is already stored (btree holds pointers, no need to re-save)
   if (isnew) {
-    btree_set(iface->bond->rt, rt_entry);
+    printf("  New MAC\n");
+    btree_set(rt, rt_entry);
   }
+
+  printf("  RT is now %ld\n\n", btree_count(rt));
 
   pthread_mutex_unlock(mtx);
   return 0;
