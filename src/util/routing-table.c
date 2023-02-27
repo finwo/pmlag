@@ -57,7 +57,6 @@ int rt_upsert(
     exit(1);
   }
 
-
   // Bail if
   if (
       (!bcidx && rt_entry->bcidx) ||  // We receive a regular packet on bcidx-tracked entry
@@ -85,19 +84,18 @@ int rt_upsert(
   // Update the rt_entry's broadcast index
   rt_entry->bcidx = bcidx;
 
+  printf("  How 'bout now, %d\n", rt_entry->bcidx);
+
   // Add our iface to the entry's interface list
   iface_entry          = malloc(sizeof(pmlag_iface_llist));
   iface_entry->next    = rt_entry->interfaces;
   iface_entry->data    = iface;
   rt_entry->interfaces = iface_entry;
 
-  // Save rt entry in the routing table if it's new
-  // A pre-existing one is already stored (btree holds pointers, no need to re-save)
-  if (isnew) {
-    printf("  New MAC\n");
-    btree_set(rt, rt_entry);
-  }
+  // Ensure the entry is in the rt
+  btree_set(rt, rt_entry);
 
+  printf("  or now, %d\n", rt_entry->bcidx);
   printf("  RT is now %ld\n\n", btree_count(rt));
 
   pthread_mutex_unlock(mtx);
