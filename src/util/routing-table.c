@@ -49,6 +49,8 @@ int rt_upsert(
     isnew = 1;
   }
 
+  printf("  Old bcidx, %d\n", rt_entry->bcidx);
+
   // Bail if
   if (
       (!bcidx && rt_entry->bcidx) ||  // We receive a regular packet on bcidx-tracked entry
