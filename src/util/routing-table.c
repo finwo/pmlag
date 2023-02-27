@@ -33,7 +33,7 @@ int rt_upsert(
   pthread_mutex_lock(mtx);
 
   // Attempt to fetch the rt entry
-  rt_entry = btree_get(rt, &(struct pmlag_rt_entry){ .mac = mac });
+  rt_entry = btree_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
 
   if (rt_entry) {
     printf("  Found, %d\n", rt_entry->bcidx);
