@@ -35,7 +35,9 @@ int rt_upsert(
   // Attempt to fetch the rt entry
   rt_entry = btree_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
 
+  int16_t obcidx = 0;
   if (rt_entry) {
+    obcidx = rt_entry->bcidx;
     printf("  Found, %d\n", rt_entry->bcidx);
   }
 
@@ -50,6 +52,11 @@ int rt_upsert(
   }
 
   printf("  Old bcidx, %d\n", rt_entry->bcidx);
+  if ((!isnew) && (obcidx != rt_entry->bcidx)) {
+    printf("  BORKED\n");
+    exit(1);
+  }
+
 
   // Bail if
   if (
