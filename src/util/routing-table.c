@@ -64,7 +64,7 @@ int rt_upsert(
       ((bcidx - rt_entry->bcidx) < 0) // Or the received bcidx is lower than known (old packet)
   ) {
     printf("  Bail, %d, %d\n\n", bcidx, rt_entry->bcidx);
-    pthread_mutex_unlock(&(iface->bond->mtx_rt));
+    pthread_mutex_unlock(mtx);
     return 0;
   }
 

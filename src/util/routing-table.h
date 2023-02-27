@@ -5,7 +5,7 @@
 
 struct pmlag_rt_entry {
   unsigned char *mac;            // mac address of the remote entity
-  int16_t bcidx;                // broadcast index last seen from the mac
+  int16_t bcidx;                 // broadcast index last seen from the mac
   pmlag_iface_llist *interfaces; // list of pointers to interfaces
 };
 
