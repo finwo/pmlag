@@ -1,3 +1,4 @@
+#include <linux/if_ether.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,10 +6,13 @@
 #include <unistd.h>
 
 #include "../util/config.h"
+#include "../util/routing-table.h"
 #include "../util/socket.h"
 
 int task_iface_onpacket(struct pmlag_iface *iface, unsigned char *buffer, size_t buflen) {
   size_t send_len;
+  uint16_t proto;
+  int16_t bcidx;
 
   // Debug: print eth header
   printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x < %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld)\n",
@@ -17,6 +21,23 @@ int task_iface_onpacket(struct pmlag_iface *iface, unsigned char *buffer, size_t
     ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO
     buflen
   );
+
+  // Update the routing table as-needed
+  proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1];
+  bcidx = 0;
+  if (proto == 0x0666) {
+    bcidx = ((int16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3];
+  }
+  rt_upsert(
+    iface->bond->rt,
+    &(iface->bond->mtx_rt),
+    iface,
+    buffer+ETH_ALEN,
+    bcidx
+  );
+  if (proto == 0x0666) {
+    return 0;
+  }
 
   // Redirect packet to bond socket as-is
   send_len = write(iface->bond->sockfd, buffer, buflen);
@@ -76,18 +97,5 @@ void * task_iface_thread(void *arg) {
 }
 
 
-/*     // Update routing table if our custom protocol is seen */
-/*     proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1]; */
-/*     if (proto == 0x0666) { */
-/*       bcidx = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+2]) << 8) + buffer[(ETH_ALEN*2)+3]; */
-/*       iface_add_rt(iface, buffer+ETH_ALEN, bcidx); */
-/*       continue; */
-/*     } else { */
-/*       iface_add_rt(iface, buffer+ETH_ALEN, 0); */
-/*     } */
-
-/*     /1* trim_rt(iface->bond, *1/ */ 
-/*     rt_len = btree_count(iface->bond->rt); */
-/*     printf("Current RT length: %ld\n", rt_len); */
 
 
