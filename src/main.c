@@ -28,6 +28,13 @@ static const char *const usage[] = {
 int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
 
+  // Seed random
+  unsigned int seed;
+  FILE* urandom = fopen("/dev/urandom", "r");
+  fread(&seed, sizeof(int), 1, urandom);
+  fclose(urandom);
+  srand(seed);
+
   // Define which options we support
   struct argparse_option options[] = {
     OPT_HELP(),
