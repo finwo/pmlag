@@ -15,12 +15,10 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "tidwall/btree.h"
 #include "cofyc/argparse.h"
 #include "util/config.h"
 
 #include "task/bond.h"
-/* #include "socket.h" */
 
 static const char *const usage[] = {
   __NAME " [options]",

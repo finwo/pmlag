@@ -4,7 +4,7 @@
 #include <pthread.h>
 #include <stdint.h>
 
-#include "tidwall/btree.h"
+#include "finwo/mindex.h"
 
 #include "linked-list.h"
 
@@ -38,7 +38,7 @@ struct pmlag_bond {
   int16_t bcidx;                 // big-endian broadcast index for quickly detecting dead paths
   pthread_t tid;                  // thread id where the bond interface listener recides in
   pthread_mutex_t mtx_rt;         // lock for the routing table of the bond
-  struct btree *rt;               // pointer to the routing table
+  struct mindex_t *rt;               // pointer to the routing table
   pmlag_iface_llist *interfaces; // linked-list of interfaces contained in the bond
 };
 

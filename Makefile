@@ -4,7 +4,7 @@ SRC:=
 SRC+=$(wildcard src/*.c)
 SRC+=$(wildcard src/*/*.c)
 
-override CFLAGS?=-Wall -g
+override CFLAGS?=-Wall -g -O2
 
 INCLUDES:=
 INCLUDES+=-I src

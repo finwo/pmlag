@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "tidwall/btree.h"
+#include "finwo/mindex.h"
 #include "../util/config.h"
 #include "../util/routing-table.h"
 #include "../util/socket.h"
@@ -142,7 +142,7 @@ void * task_bond_thread(void *arg) {
 
 /*     // Fetch entry from routing table */
 /*     pthread_mutex_lock(&(bond->mtx_rt)); */
-/*     rt_entry = btree_get(bond->rt, &(struct pmlag_rt_entry){ .mac = buffer }); */
+/*     rt_entry = mindex_get(bond->rt, &(struct pmlag_rt_entry){ .mac = buffer }); */
 
 /*     // Broadcast on ALL interfaces if no rt entry OR broadcast packet */
 /*     if ((!rt_entry) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) { */
