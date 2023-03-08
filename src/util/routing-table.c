@@ -141,7 +141,7 @@ struct pmlag_iface * rt_find(
   // Select an interface at random
   int sel = rand() % llist_len;
   iface_entry = rt_entry->interfaces;
-  while(--sel) {
+  while(sel--) {
     iface_entry = iface_entry->next;
   }
 
