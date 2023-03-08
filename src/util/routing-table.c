@@ -11,10 +11,10 @@ static int rt_compare(const void *a, const void *b, void *udata) {
   struct pmlag_rt_entry *ta = (struct pmlag_rt_entry *)a;
   struct pmlag_rt_entry *tb = (struct pmlag_rt_entry *)b;
 
-  printf("\nCMP\n  A = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n  B = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
-    ta->mac[0],ta->mac[1],ta->mac[2],ta->mac[3],ta->mac[4],ta->mac[5],
-    tb->mac[0],tb->mac[1],tb->mac[2],tb->mac[3],tb->mac[4],tb->mac[5]
-  );
+  /* printf("\nCMP\n  A = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n  B = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", */
+  /*   ta->mac[0],ta->mac[1],ta->mac[2],ta->mac[3],ta->mac[4],ta->mac[5], */
+  /*   tb->mac[0],tb->mac[1],tb->mac[2],tb->mac[3],tb->mac[4],tb->mac[5] */
+  /* ); */
 
   return memcmp(ta->mac, tb->mac, ETH_ALEN);
 }
@@ -34,10 +34,10 @@ int rt_upsert(
   unsigned char *mac,
   int16_t bcidx
 ) {
-  /* int isnew  = 0; */
+  int isnew  = 0;
   struct pmlag_rt_entry *rt_entry;
 
-  printf("\nUpserting RT, %d\n", bcidx);
+  /* printf("\nUpserting RT, %d\n", bcidx); */
 
   // Lock the routing table
   pthread_mutex_lock(mtx);
@@ -45,11 +45,11 @@ int rt_upsert(
   // Attempt to fetch the rt entry
   rt_entry = mindex_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
 
-  /* int16_t obcidx = 0; */
-  if (rt_entry) {
-  /*   obcidx = rt_entry->bcidx; */
-    printf("  Found, %d\n", rt_entry->bcidx);
-  }
+  /* /1* int16_t obcidx = 0; *1/ */
+  /* if (rt_entry) { */
+  /* /1*   obcidx = rt_entry->bcidx; *1/ */
+  /*   printf("  Found, %d\n", rt_entry->bcidx); */
+  /* } */
 
   // None given, build new one
   if (!rt_entry) {
@@ -58,7 +58,7 @@ int rt_upsert(
     /* rt_entry->bcidx      = 0; */
     rt_entry->interfaces = NULL;
     memcpy(rt_entry->mac, mac, ETH_ALEN);
-    /* isnew = 1; */
+    isnew = 1;
   }
 
   /* printf("  Old bcidx, %d\n", rt_entry->bcidx); */
@@ -103,11 +103,49 @@ int rt_upsert(
   rt_entry->interfaces = iface_entry;
 
   // Ensure the entry is in the rt
-  mindex_set(rt, rt_entry);
+  if (isnew) {
+    mindex_set(rt, rt_entry);
+  }
 
-  /* printf("  or now, %d\n", rt_entry->bcidx); */
-  printf("  RT is now %ld\n\n", mindex_length(rt));
+  /* /1* printf("  or now, %d\n", rt_entry->bcidx); *1/ */
+  /* printf("  RT is now %ld\n\n", mindex_length(rt)); */
 
   pthread_mutex_unlock(mtx);
   return 0;
+}
+
+struct pmlag_iface * rt_find(
+  struct mindex_t *rt,
+  pthread_mutex_t *mtx,
+  unsigned char *mac
+) {
+  // Lock the routing table
+  pthread_mutex_lock(mtx);
+  struct pmlag_rt_entry *rt_entry;
+  int llist_len = 0;
+
+  // Attempt to fetch the rt entry
+  rt_entry = mindex_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
+  if (!rt_entry) {
+    pthread_mutex_unlock(mtx);
+    return NULL;
+  }
+
+  // Get the list length
+  pmlag_iface_llist *iface_entry = rt_entry->interfaces;
+  while(iface_entry) {
+    llist_len++;
+    iface_entry = iface_entry->next;
+  }
+
+  // Select an interface at random
+  int sel = rand() % llist_len;
+  iface_entry = rt_entry->interfaces;
+  while(--sel) {
+    iface_entry = iface_entry->next;
+  }
+
+  // Unlock the routing table again
+  pthread_mutex_unlock(mtx);
+  return iface_entry->data;
 }

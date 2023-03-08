@@ -21,4 +21,10 @@ int rt_upsert(
   int16_t bcidx
 );
 
+struct pmlag_iface * rt_find(
+  struct mindex_t *rt,
+  pthread_mutex_t *mtx,
+  unsigned char *mac
+);
+
 #endif // __PMLAG_UTIL_RT_H__

@@ -18,31 +18,38 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
   saddr_ll.sll_halen = ETH_ALEN;
 
   // Debug: print eth header
-  printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld)\n",
+  printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld), %ld\n",
     buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC
     buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST
     ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO
-    buflen
+    buflen,
+    mindex_length(bond->rt)
   );
 
-  // Send packet to the first available iface
-  struct pmlag_iface *iface = bond->interfaces->data;
-
-/*     // Select interface at random */
-/*     iface_list_sel = rand() % iface_list_len; */
-/*     iface_list_entry = rt_entry->interfaces; */
-/*     while(iface_list_sel--) iface_list_entry = iface_list_entry->next; */
-/*     iface = iface_list_entry->data; */
-
-/*     // Unlock routing table */
-/*     pthread_mutex_unlock(&(bond->mtx_rt)); */
-
-  // Prepare saddr_ll for sendto
-  saddr_ll.sll_ifindex = iface->ifidx;
+  // Get interface to send the packet from
   memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN);
+  struct pmlag_iface *iface = rt_find(bond->rt, &(bond->mtx_rt), buffer);
+  pmlag_iface_llist *iface_entry;
+  size_t send_len;
+
+  // Broadcast on ALL interfaces if no rt entry OR broadcast packet
+  if ((!iface) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) {
+    iface_entry = bond->interfaces;
+    while(iface_entry) {
+      saddr_ll.sll_ifindex = iface_entry->data->ifidx;
+      send_len = sendto(iface_entry->data->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
+      if(send_len != buflen) {
+        perror("sendto");
+        return 1;
+      }
+      iface_entry = iface_entry->next;
+    }
+    return 0;
+  }
 
   // Forward packet to iface as-is
-  size_t send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
+  saddr_ll.sll_ifindex = iface->ifidx;
+  send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
   if(send_len != buflen) {
     perror("sendto");
     return 1;
@@ -144,22 +151,24 @@ void * task_bond_thread(void *arg) {
 /*     pthread_mutex_lock(&(bond->mtx_rt)); */
 /*     rt_entry = mindex_get(bond->rt, &(struct pmlag_rt_entry){ .mac = buffer }); */
 
-/*     // Broadcast on ALL interfaces if no rt entry OR broadcast packet */
-/*     if ((!rt_entry) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) { */
-/*       pthread_mutex_unlock(&(bond->mtx_rt)); */
-/*       iface = bond->interfaces; */
-/*       while(iface) { */
-/*         saddr_ll.sll_ifindex = iface->ifidx; */
-/*         send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)); */
-/*         if(send_len != buflen) { */
-/*           perror("sendto"); */
-/*           /1* pthread_exit(NULL); *1/ */
-/*           /1* return NULL; *1/ */
-/*         } */
-/*         iface = iface->next; */
-/*       } */
-/*       continue; */
-/*     } */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /*     // Fetch length of interface list */
 /*     iface_list_len = 0; */
