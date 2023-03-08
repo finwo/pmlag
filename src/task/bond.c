@@ -17,14 +17,14 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
   struct sockaddr_ll saddr_ll;
   saddr_ll.sll_halen = ETH_ALEN;
 
-  // Debug: print eth header
-  printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld), %ld\n",
-    buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC
-    buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST
-    ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO
-    buflen,
-    mindex_length(bond->rt)
-  );
+  /* // Debug: print eth header */
+  /* printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld), %ld\n", */
+  /*   buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
+  /*   buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
+  /*   ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO */
+  /*   buflen, */
+  /*   mindex_length(bond->rt) */
+  /* ); */
 
   // Get interface to send the packet from
   memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN);
@@ -135,78 +135,3 @@ void * task_bond_thread(void *arg) {
   pthread_exit(NULL);
   return NULL;
 }
-
-/* void * thread_bond_old(void *arg) { */
-/*   struct pmlag_rt_entry *rt_entry; */
-/*   int iface_list_len; */
-/*   int iface_list_sel; */
-/*   pmlag_iface_llist *iface_list_entry; */
-
-/*   sleep(1); */
-
-/*   while(1) { */
-/*     /1* sleep(1); *1/ */
-
-/*     // Fetch entry from routing table */
-/*     pthread_mutex_lock(&(bond->mtx_rt)); */
-/*     rt_entry = mindex_get(bond->rt, &(struct pmlag_rt_entry){ .mac = buffer }); */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*     // Fetch length of interface list */
-/*     iface_list_len = 0; */
-/*     iface_list_entry = rt_entry->interfaces; */
-/*     while(iface_list_entry) { */
-/*       iface_list_len++; */
-/*       iface_list_entry = iface_list_entry->next; */
-/*     } */
-
-/*     // Select interface at random */
-/*     iface_list_sel = rand() % iface_list_len; */
-/*     iface_list_entry = rt_entry->interfaces; */
-/*     while(iface_list_sel--) iface_list_entry = iface_list_entry->next; */
-/*     iface = iface_list_entry->data; */
-
-/*     // Unlock routing table */
-/*     pthread_mutex_unlock(&(bond->mtx_rt)); */
-
-/*     // Prepare saddr_ll for sendto */
-/*     saddr_ll.sll_ifindex = iface->ifidx; */
-/*     memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN); */
-
-/*     // Forward packet to iface as-is */
-/*     send_len = sendto(iface->sockfd, buffer, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)); */
-/*     if(send_len != buflen) { */
-/*       perror("sendto"); */
-/*       /1* pthread_exit(NULL); *1/ */
-/*       /1* return NULL; *1/ */
-/*     } */
-/*   } */
-
-  /* // Wait for iface threads to finish */
-  /* iface = bond->interfaces; */
-  /* while(iface) { */
-  /*   pthread_join(iface->tid, NULL); */
-  /*   iface = iface->next; */
-  /* } */
-
-  /* pthread_exit(NULL); */
-  /* return NULL; */
-/* } */

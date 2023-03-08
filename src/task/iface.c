@@ -14,13 +14,13 @@ int task_iface_onpacket(struct pmlag_iface *iface, unsigned char *buffer, size_t
   uint16_t proto;
   int16_t bcidx;
 
-  // Debug: print eth header
-  printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x < %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld)\n",
-    buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST
-    buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC
-    ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO
-    buflen
-  );
+  /* // Debug: print eth header */
+  /* printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x < %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld)\n", */
+  /*   buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
+  /*   buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
+  /*   ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO */
+  /*   buflen */
+  /* ); */
 
   // Update the routing table as-needed
   proto = ((uint16_t)((unsigned char)buffer[(ETH_ALEN*2)+0]) << 8) + buffer[(ETH_ALEN*2)+1];

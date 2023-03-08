@@ -15,14 +15,14 @@
 #include "socket.h"
 
 unsigned char * iface_mac(char * ifname) {
-	struct ifreq ifr;
-	unsigned char *mac = calloc(1, ETH_ALEN);
+  struct ifreq ifr;
+  unsigned char *mac = calloc(1, ETH_ALEN);
   int sockfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL));
-	ifr.ifr_addr.sa_family = AF_PACKET;
-	strncpy(ifr.ifr_name , ifname , IFNAMSIZ-1);
-	ioctl(sockfd, SIOCGIFHWADDR, &ifr);
-	close(sockfd);
-	memcpy(mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
+  ifr.ifr_addr.sa_family = AF_PACKET;
+  strncpy(ifr.ifr_name , ifname , IFNAMSIZ-1);
+  ioctl(sockfd, SIOCGIFHWADDR, &ifr);
+  close(sockfd);
+  memcpy(mac, ifr.ifr_hwaddr.sa_data, ETH_ALEN);
   return mac;
 }
 

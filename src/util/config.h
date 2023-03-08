@@ -31,14 +31,14 @@ struct pmlag_iface {
 };
 
 struct pmlag_bond {
-  void *next;                     // linked-list next reference
-  char *name;                     // name of the bond interface
-  int   mode;                     // which mode to run pmlag in for this bond
-  int   sockfd;                   // file descriptor for the bond socket interface
+  void *next;                    // linked-list next reference
+  char *name;                    // name of the bond interface
+  int   mode;                    // which mode to run pmlag in for this bond
+  int   sockfd;                  // file descriptor for the bond socket interface
   int16_t bcidx;                 // big-endian broadcast index for quickly detecting dead paths
-  pthread_t tid;                  // thread id where the bond interface listener recides in
-  pthread_mutex_t mtx_rt;         // lock for the routing table of the bond
-  struct mindex_t *rt;               // pointer to the routing table
+  pthread_t tid;                 // thread id where the bond interface listener recides in
+  pthread_mutex_t mtx_rt;        // lock for the routing table of the bond
+  struct mindex_t *rt;           // pointer to the routing table
   pmlag_iface_llist *interfaces; // linked-list of interfaces contained in the bond
 };
 
