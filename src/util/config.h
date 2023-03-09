@@ -35,8 +35,8 @@ struct pmlag_bond {
   char *name;                    // name of the bond interface
   int   mode;                    // which mode to run pmlag in for this bond
   int   sockfd;                  // file descriptor for the bond socket interface
-  int16_t bcidx;                 // big-endian broadcast index for quickly detecting dead paths
-  pthread_t tid;                 // thread id where the bond interface listener recides in
+  pthread_t tid_bond;            // thread id where the bond interface listener recides in
+  pthread_t tid_announce;        // thread id that'll output announces for the bond
   pthread_mutex_t mtx_rt;        // lock for the routing table of the bond
   struct mindex_t *rt;           // pointer to the routing table
   pmlag_iface_llist *interfaces; // linked-list of interfaces contained in the bond

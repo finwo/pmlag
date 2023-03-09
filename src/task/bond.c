@@ -11,6 +11,8 @@
 #include "../util/config.h"
 #include "../util/routing-table.h"
 #include "../util/socket.h"
+
+#include "announce.h"
 #include "iface.h"
 
 int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t buflen) {
@@ -95,6 +97,13 @@ void * task_bond_thread(void *arg) {
       return (void*)1;
     }
     iface_entry = iface_entry->next;
+  }
+
+  // Start an announcement thread
+  if(pthread_create(&(bond->tid_announce), NULL, task_announce_thread, bond)) {
+    perror("Starting announce thread");
+    pthread_exit((void*)1);
+    return (void*)1;
   }
 
   // Free this bond's routing table
