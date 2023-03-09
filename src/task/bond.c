@@ -17,14 +17,15 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
   struct sockaddr_ll saddr_ll;
   saddr_ll.sll_halen = ETH_ALEN;
 
-  /* // Debug: print eth header */
-  /* printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld), %ld\n", */
-  /*   buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC */
-  /*   buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST */
-  /*   ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO */
-  /*   buflen, */
-  /*   mindex_length(bond->rt) */
-  /* ); */
+#ifdef DEBUG
+  // Debug: print eth header
+  printf("%.2x:%.2x:%.2x:%.2x:%.2x:%.2x > %.2x:%.2x:%.2x:%.2x:%.2x:%.2x, %.4x (%ld)\n",
+    buffer[6],buffer[7],buffer[8],buffer[9],buffer[10],buffer[11], // SRC
+    buffer[0],buffer[1],buffer[2],buffer[3],buffer[ 4],buffer[ 5], // DST
+    ((unsigned int)((unsigned char)buffer[12]) << 8) + buffer[13], // PROTO
+    buflen
+  );
+#endif // DEBUG
 
   // Get interface to send the packet from
   memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN);
