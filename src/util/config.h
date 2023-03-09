@@ -19,6 +19,10 @@ extern "C" {
 
 #define RCVBUFSIZ 65536
 
+#ifndef RT_MAX_ENTRIES
+#define RT_MAX_ENTRIES 64
+#endif
+
 typedef LLIST(int l; struct pmlag_iface) pmlag_iface_llist;
 
 struct pmlag_iface {

@@ -11,6 +11,9 @@ static int rt_compare(const void *a, const void *b, void *udata) {
   struct pmlag_rt_entry *ta = (struct pmlag_rt_entry *)a;
   struct pmlag_rt_entry *tb = (struct pmlag_rt_entry *)b;
 
+  // Attempt without memcmp (faster)
+  if (a == b) return 0;
+
   /* printf("\nCMP\n  A = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n  B = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", */
   /*   ta->mac[0],ta->mac[1],ta->mac[2],ta->mac[3],ta->mac[4],ta->mac[5], */
   /*   tb->mac[0],tb->mac[1],tb->mac[2],tb->mac[3],tb->mac[4],tb->mac[5] */
@@ -20,7 +23,31 @@ static int rt_compare(const void *a, const void *b, void *udata) {
 }
 
 static void rt_purge(const void *item, void *udata) {
-  // Empty for now
+  struct pmlag_rt_entry *rt_entry = (struct pmlag_rt_entry *)item;
+  pmlag_iface_llist *iface_entry;
+
+/* #ifdef DEBUG */
+/*   printf("PURGE %.2x:%.2x:%.2x:%.2x:%.2x:%.2x -- %p\n", */
+/*     rt_entry->mac[0], */
+/*     rt_entry->mac[1], */
+/*     rt_entry->mac[2], */
+/*     rt_entry->mac[3], */
+/*     rt_entry->mac[4], */
+/*     rt_entry->mac[5], */
+/*     item */
+/*   ); */
+/* #endif */
+
+  // Free all iface entries in the rt_entry
+  while(rt_entry->interfaces) {
+    iface_entry          = rt_entry->interfaces;
+    rt_entry->interfaces = iface_entry->next;
+    free(iface_entry);
+  }
+
+  // Free remainder
+  free(rt_entry->mac);
+  free(rt_entry);
 }
 
 struct mindex_t * rt_init(void *udata) {
@@ -37,19 +64,22 @@ int rt_upsert(
   int isnew  = 0;
   struct pmlag_rt_entry *rt_entry;
 
-  /* printf("\nUpserting RT, %d\n", bcidx); */
+/* #ifdef DEBUG */
+/*   printf("rt_upsert\n"); */
+/* #endif */
 
   // Lock the routing table
   pthread_mutex_lock(mtx);
+/* #ifdef DEBUG */
+/*   printf("  acquired lock\n"); */
+/* #endif */
 
   // Attempt to fetch the rt entry
   rt_entry = mindex_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
 
-#ifdef DEBUG
-  if (rt_entry) {
-    printf("  Found, %d\n", rt_entry->bcidx);
-  }
-#endif
+/* #ifdef DEBUG */
+/*   printf("  Found %p -- %d\n", rt_entry, rt_entry ? rt_entry->bcidx : 0); */
+/* #endif */
 
   // None given, build new one
   if (!rt_entry) {
@@ -64,11 +94,11 @@ int rt_upsert(
   // Bail if
   if (
       (!bcidx && rt_entry->bcidx) ||  // We receive a regular packet on bcidx-tracked entry
-      ((bcidx - rt_entry->bcidx) < 0) // Or the received bcidx is lower than known (old packet)
+      (rt_entry->bcidx && ((bcidx - rt_entry->bcidx) < 0)) // Or the received bcidx is lower than known (old packet)
   ) {
-#ifdef DEBUG
-    printf("  Bail, %d, %d\n\n", bcidx, rt_entry->bcidx);
-#endif
+/* #ifdef DEBUG */
+/*     printf("  Bail, %d, %d\n\n", bcidx, rt_entry->bcidx); */
+/* #endif */
     pthread_mutex_unlock(mtx);
     return 0;
   }
@@ -102,9 +132,16 @@ int rt_upsert(
     mindex_set(rt, rt_entry);
   }
 
-#ifdef DEBUG
-  printf("  Iface count: %d\n", rt_entry->interfaces->l);
-#endif
+/* #ifdef DEBUG */
+/*   printf("  Iface count: %d\n", rt_entry->interfaces->l); */
+/*   printf("  Routing table is now %ld entries\n", mindex_length(rt)); */
+/* #endif */
+  if (mindex_length(rt) > RT_MAX_ENTRIES) {
+    rt_entry = mindex_rand(rt);
+    if (rt_entry) {
+      mindex_delete(rt, rt_entry);
+    }
+  }
 
   pthread_mutex_unlock(mtx);
   return 0;
@@ -118,6 +155,7 @@ struct pmlag_iface * rt_find(
   // Lock the routing table
   pthread_mutex_lock(mtx);
   struct pmlag_rt_entry *rt_entry;
+  struct pmlag_iface *iface;
   int llist_len = 0;
 
   // Attempt to fetch the rt entry
