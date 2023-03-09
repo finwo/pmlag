@@ -30,7 +30,7 @@ void * task_announce_thread(void *arg) {
   memcpy(buffer+ETH_ALEN, mac, ETH_ALEN);                  // Source      = bond
   memcpy(buffer+(ETH_ALEN*2), &ethtype, sizeof(uint16_t)); // EtherType   = 0x0666 = custom
 
-  int16_t bcidx = htons(rand() | 1);
+  int16_t bcidx = htons(1);
 
   while(1) {
     sleep(1);
