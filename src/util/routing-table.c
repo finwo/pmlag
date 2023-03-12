@@ -155,7 +155,6 @@ struct pmlag_iface * rt_find(
   // Lock the routing table
   pthread_mutex_lock(mtx);
   struct pmlag_rt_entry *rt_entry;
-  struct pmlag_iface *iface;
   int llist_len = 0;
 
   // Attempt to fetch the rt entry
