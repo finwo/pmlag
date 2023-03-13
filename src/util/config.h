@@ -39,6 +39,7 @@ struct pmlag_bond {
   char *name;                    // name of the bond interface
   int   mode;                    // which mode to run pmlag in for this bond
   int   sockfd;                  // file descriptor for the bond socket interface
+  unsigned char *hwaddr;         // hwaddr to use for the interface (null = random)
   pthread_t tid_bond;            // thread id where the bond interface listener recides in
   pthread_t tid_announce;        // thread id that'll output announces for the bond
   pthread_mutex_t mtx_rt;        // lock for the routing table of the bond

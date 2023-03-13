@@ -1,9 +1,11 @@
+#include <linux/if_ether.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "benhoyt/inih.h"
 #include "config.h"
+#include "socket.h"
 
 static int config_load_handler(
   void *user,
@@ -48,6 +50,7 @@ static int config_load_handler(
     } else {
       return 0;
     }
+
   } else if (!strcmp(name, "interface")) {
 
     // Select the right interface
@@ -68,6 +71,35 @@ static int config_load_handler(
       iface_entry->data       = calloc(1, sizeof(struct pmlag_iface));
       iface_entry->data->name = strdup(value);
       iface_entry->data->bond = bond;
+    }
+
+  } else if (!strcmp(name, "hwaddr")) {
+
+    // Find iface with name == value
+    iface_entry = bond->interfaces;
+    while(iface_entry) {
+      if (!strcmp(iface_entry->data->name, value)) break;
+      iface_entry = iface_entry->next;
+    }
+
+    if (iface_entry) {
+      // Got interface by that name = use it's hwaddr
+      bond->hwaddr = iface_mac(iface_entry->data->name);
+    } else if (!strcmp(value, "random")) {
+      // "random" = null, a.k.a. let the kernel generate a random mac
+      if (bond->hwaddr) free(bond->hwaddr);
+      bond->hwaddr = NULL;
+    } else {
+      // xx:xx:xx:xx:xx:xx
+      bond->hwaddr = (unsigned char *)malloc(6); // ETH_ALEN should be 6, but this is safer
+      sscanf(value, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+        &(bond->hwaddr[0]),
+        &(bond->hwaddr[1]),
+        &(bond->hwaddr[2]),
+        &(bond->hwaddr[3]),
+        &(bond->hwaddr[4]),
+        &(bond->hwaddr[5])
+      );
     }
 
   } else {

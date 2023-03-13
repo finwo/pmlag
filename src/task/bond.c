@@ -76,9 +76,9 @@ void * task_bond_thread(void *arg) {
   bond->rt = rt_init(bond);
 
   // Assign bond interface
-  unsigned char *mac = iface_mac(bond->interfaces->data->name);
-  bond->sockfd = tap_alloc(bond->name, mac);
-  free(mac);
+  /* unsigned char *mac = iface_mac(bond->interfaces->data->name); */
+  bond->sockfd = tap_alloc(bond->name, bond->hwaddr);
+  /* free(mac); */
   if (bond->sockfd < 0) {
     perror("Allocating bond interface");
     pthread_exit(NULL);
