@@ -5,6 +5,9 @@ NAME
 
 pmlag - Poor man's link aggregator
 
+pmlag is a tool for bonding network interfaces together when the hardware on
+the other side of the cable(s) doesn't support it.
+
 COMPILATION
 ===========
 
@@ -18,6 +21,20 @@ SYNOPSIS
 ========
 
 `pmlag [options]`
+
+OPTIONS
+=======
+
+Option | Description |
+ --- | ---
+&dash;c &lt;file&gt; | Select the config file to use (default: /etc/pmlag/pmlag.ini)
+|
+&dash;h &#124; &dash;&dash;help | Show basic usage of the utility
+
+CONFIGURATION
+=============
+
+TODO
 
 LICENSE
 =======
