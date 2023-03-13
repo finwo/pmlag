@@ -117,19 +117,6 @@ int tap_alloc(char * ifname, unsigned char * mac) {
   if( *ifname ) {
     strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
   }
-  /* if ( mac ) { */
-  /*   // TODO: random, copied or specific mac address pulled from ini */
-  /*   printf("MAC: %.2X-%.2X-%.2X-%.2X-%.2X-%.2X\n",mac[0],mac[1],mac[2],mac[3],mac[4],mac[5]); */
-  /*   memset(&ifr, 0, sizeof(ifr)); */
-  /*   strcpy(ifr.ifr_name, ifname); */
-  /*   ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER; */
-  /*   memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_ALEN); */
-  /*   if ((err = if_ioctl(SIOCSIFHWADDR, &ifr)) < 0) { */
-  /*     perror("Set if hwaddr"); */
-  /*     close(fd); */
-  /*     return err; */
-  /*   } */
-  /* } */
   if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
     perror("Open tun");
     close(fd);
@@ -137,7 +124,21 @@ int tap_alloc(char * ifname, unsigned char * mac) {
   }
   strcpy(ifname, ifr.ifr_name);
 
-  // Set interface to multicast|broadcast
+  // Set the interface's mac address
+  if ( mac ) {
+    // TODO: random, copied or specific mac address pulled from ini
+    memset(&ifr, 0, sizeof(ifr));
+    strcpy(ifr.ifr_name, ifname);
+    ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+    memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_ALEN);
+    if ((err = if_ioctl(SIOCSIFHWADDR, &ifr)) < 0) {
+      perror("Set if hwaddr");
+      close(fd);
+      return err;
+    }
+  }
+
+  // Fetch the current flags
   memset(&ifr, 0, sizeof(ifr));
   strcpy(ifr.ifr_name, ifname);
   if (if_ioctl(SIOCGIFFLAGS, &ifr) < 0) {
@@ -145,6 +146,8 @@ int tap_alloc(char * ifname, unsigned char * mac) {
     close(fd);
     return err;
   }
+
+  // Bring up the interface
   if (!(ifr.ifr_flags & IFF_UP)) {
     ifr.ifr_flags |= IFF_UP;
     if (if_ioctl(SIOCSIFFLAGS, &ifr) < 0) {
