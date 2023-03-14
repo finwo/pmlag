@@ -5,7 +5,7 @@
   "main": "build.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node $(jq .main < package.json)"
+    "start": "node $(jq -r .main < package.json)"
   },
   "keywords": [],
   "author": "",
