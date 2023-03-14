@@ -6,7 +6,7 @@ const esbuildSvelte = require('esbuild-svelte');
 const preprocess    = require('svelte-preprocess');
 const pkg           = require('./package.json');
 
-const pageroot = process.env.PAGE_ROOT || '';
+const pageroot = process.env.PAGE_ROOT || '/';
 
 // Simple for now
 const entryPoints = {
