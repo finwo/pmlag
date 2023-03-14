@@ -2,3 +2,4 @@
 /lib/
 /pmlag
 *.o
+/docs/dist
