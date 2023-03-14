@@ -2,5 +2,4 @@
 /lib/
 /pmlag
 *.o
-/doc/dist
-node_modules/
+/package/
