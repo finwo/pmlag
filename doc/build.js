@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
-console.log('hello world');
+const fs      = require('fs');
+const esbuild = require('esbuild');
+const pkg     = require('./package.json');
 
-// const fs            = require('fs');
-// const esbuild       = require('esbuild');
-// const webpackConfig = require('./webpack.config');
+fs.mkdirSync('dist');
 
-// const buildList = [];
-// const styles    = [];
+const buildList = [];
+const styles    = [];
 
 // // Re-use webpack config for entrypoints
 // for(let [name, path] of Object.entries(webpackConfig.entry)) {
@@ -43,18 +43,18 @@ console.log('hello world');
 //   }
 // }
 
-// fs.writeFileSync(__dirname + `/dist/index.html`, `
-// <!DOCTYPE html>
-// <html>
-//   <head>
-//     <meta charset="utf-8">
-//     <title>${webpackConfig.plugins[0].title}x</title>}
-//     <meta name="viewport" content="width=device-width, initial-scale=1">
-//     ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('')}
-//     ${buildList.map(name => `<script defer src="${name}"></script>`).join('')}
-//   </head>
-//   <body>
-//   </body>
-// </html>
-// `);
+fs.writeFileSync(__dirname + `/dist/index.html`, `
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>${pkg.description}x</title>}
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('')}
+    ${buildList.map(name => `<script defer src="${name}"></script>`).join('')}
+  </head>
+  <body>
+  </body>
+</html>
+`);
 
