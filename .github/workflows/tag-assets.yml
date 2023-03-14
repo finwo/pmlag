@@ -15,7 +15,9 @@ jobs:
       - run: dep install
       - run: make clean
       - run: make package
-      - run: scripts/gha-create-release.sh
-      - run: scripts/gha-attach-assets.sh
 
-
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            package/pmlag-linux-amd64.tar.gz
