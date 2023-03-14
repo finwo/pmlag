@@ -6,8 +6,8 @@ on:
       - stable
       - edge
 jobs:
-  attach_asset_amd64:
-    name: Attach assets linux-amd64
+  attach_asset:
+    name: Attach assets to release
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
