@@ -48,7 +48,7 @@ fs.writeFileSync(__dirname + `/dist/index.html`, `
 <html>
   <head>
     <meta charset="utf-8">
-    <title>${pkg.description}x</title>}
+    <title>${pkg.description}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('')}
     ${buildList.map(name => `<script defer src="${name}"></script>`).join('')}
