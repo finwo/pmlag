@@ -1,60 +1,87 @@
 #!/usr/bin/env node
 
-const fs      = require('fs');
-const esbuild = require('esbuild');
-const pkg     = require('./package.json');
+const fs            = require('fs');
+const esbuild       = require('esbuild');
+const esbuildSvelte = require('esbuild-svelte');
+const preprocess    = require('svelte-preprocess');
+const pkg           = require('./package.json');
 
-fs.mkdirSync('dist');
+// Simple for now
+const entryPoints = {
+  'app': 'src/app.ts'
+};
+
+const config = {
+  format: 'cjs',
+  target: ['chrome108','firefox107'],
+  mainFields: ['svelte', 'browser', 'module', 'main'],
+  bundle: true,
+  outdir: __dirname + '/dist',
+  entryPoints: Object.values(entryPoints),
+  minify: false,
+  plugins: [
+    esbuildSvelte({
+      preprocess: preprocess(),
+    }),
+  ],
+  // loader: {
+  //   '.ttf': 'dataurl',
+  // },
+}
 
 const buildList = [];
 const styles    = [];
 
-// // Re-use webpack config for entrypoints
-// for(let [name, path] of Object.entries(webpackConfig.entry)) {
+esbuild
+  .build(config)
+  .then(() => {
 
-//   // Fix node_modules reference
-//   if (path.substr(0, 1) !== '.') path = `../node_modules/${path}`;
+    for(const name of Object.keys(entryPoints)) {
+      buildList.push(`${name}.js`);
+      try {
+        fs.statSync(config.outdir + `/${name}.css`);
+        styles.push(`${name}.css`);
+      } catch(_e) {
+        // Intentionally empty
+      }
+    }
 
-//   // Fix missing extension
-//   if (!~['js','ts'].indexOf(path.split('.').pop())) path = `${path}.js`;
-
-//   // Run the actual build
-//   let cfg;
-//   const res = esbuild.buildSync(cfg = {
-//     format: 'cjs',
-//     target: 'es6',
-//     bundle: true,
-//     outfile: __dirname + `/dist/${name}.bundle.js`,
-//     entryPoints: [path],
-//     loader: {
-//       '.ttf': 'dataurl',
-//     },
-//   });
-
-//   console.log({cfg, res});
-
-//   // Record file to load
-//   buildList.push(`${name}.bundle.js`);
-//   try {
-//     fs.statSync(__dirname + `/dist/${name}.bundle.css`);
-//     styles.push(`${name}.bundle.css`);
-//   } catch(e) {
-//     // Intentionally empty
-//   }
-// }
-
-fs.writeFileSync(__dirname + `/dist/index.html`, `
-<!DOCTYPE html>
+    fs.writeFileSync(config.outdir + '/index.html', `<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8">
-    <title>${pkg.description}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('')}
-    ${buildList.map(name => `<script defer src="${name}"></script>`).join('')}
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+      :root {
+        font-family: sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        font-family: inherit;
+      }
+    </style>
+    ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('\n    ')}
   </head>
   <body>
+    ${buildList.map(name => `<script defer src="${name}"></script>`).join('\n    ')}
   </body>
 </html>
 `);
+
+  });
+
+// fs.writeFileSync(__dirname + `/dist/index.html`, `
+// <!DOCTYPE html>
+// <html>
+//   <head>
+//     <meta charset="utf-8">
+//     <title>${pkg.description}</title>
+//     <meta name="viewport" content="width=device-width, initial-scale=1">
+//     ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('')}
+//     ${buildList.map(name => `<script defer src="${name}"></script>`).join('')}
+//   </head>
+//   <body>
+//   </body>
+// </html>
+// `);
 
