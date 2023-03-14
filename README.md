@@ -1,43 +1,17 @@
-% pmlag(1) | General Commands Manual
-
-NAME
-====
-
-pmlag - Poor man's link aggregator
+pmlag
+=====
+<small>Poor man's link aggregator</small>
 
 pmlag is a tool for bonding network interfaces together when the hardware on
 the other side of the cable(s) doesn't support it.
 
-COMPILATION
-===========
+Getting started
+---------------
 
-This library makes use of [dep](https://github.com/finwo/dep) to manage it's
-dependencies and exports.
-
-To build, first run `dep install` from the root of the repository, after which
-you can run `make` to build the project.
-
-SYNOPSIS
-========
-
-`pmlag [options]`
-
-OPTIONS
-=======
-
-Option | Description |
- --- | ---
-&dash;c &lt;file&gt; | Select the config file to use (default: /etc/pmlag/pmlag.ini)
-|
-&dash;h &#124; &dash;&dash;help | Show basic usage of the utility
-
-CONFIGURATION
-=============
-
-TODO
+To get started, please check out [the documentation](doc/index.md).
 
 LICENSE
-=======
+-------
 
 This program itself is licensed under the MIT license:
 
