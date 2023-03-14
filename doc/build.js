@@ -6,6 +6,8 @@ const esbuildSvelte = require('esbuild-svelte');
 const preprocess    = require('svelte-preprocess');
 const pkg           = require('./package.json');
 
+const pageroot = process.env.PAGE_ROOT || '';
+
 // Simple for now
 const entryPoints = {
   'app': 'src/app.ts'
@@ -60,28 +62,15 @@ esbuild
         font-family: inherit;
       }
     </style>
-    ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('\n    ')}
+    ${styles.map(name => `<link rel="stylesheet" href="${pageroot}${name}"/>`).join('\n    ')}
   </head>
   <body>
-    ${buildList.map(name => `<script defer src="${name}"></script>`).join('\n    ')}
+    ${buildList.map(name => `<script defer src="${pageroot}${name}"></script>`).join('\n    ')}
   </body>
 </html>
 `);
 
+    // Copy index.html to 404.html
+    fs.writeFileSync(config.outdir + '/404.html', fs.readFileSync(config.outdir + '/index.html'));
+
   });
-
-// fs.writeFileSync(__dirname + `/dist/index.html`, `
-// <!DOCTYPE html>
-// <html>
-//   <head>
-//     <meta charset="utf-8">
-//     <title>${pkg.description}</title>
-//     <meta name="viewport" content="width=device-width, initial-scale=1">
-//     ${styles.map(name => `<link rel="stylesheet" href="${name}"/>`).join('')}
-//     ${buildList.map(name => `<script defer src="${name}"></script>`).join('')}
-//   </head>
-//   <body>
-//   </body>
-// </html>
-// `);
-

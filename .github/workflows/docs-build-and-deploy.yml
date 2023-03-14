@@ -22,6 +22,8 @@ jobs:
           cd doc
           npm ci
           npm start
+        env:
+          PAGE_ROOT: '/pmlag/'
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
