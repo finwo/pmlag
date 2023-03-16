@@ -3,8 +3,8 @@
 TARGET=linux-amd64
 
 echo -n "Downloading tarball..."
-curl -sSL https://github.com/finwo/pmlag/releases/download/edge/pmlag-${TARGET}.tar.gz -o - \
-  gzip -d \
+curl -sSL https://github.com/finwo/pmlag/releases/download/edge/pmlag-${TARGET}.tar.gz -o - | \
+  gzip -d | \
   tar x
 echo "done"
 
