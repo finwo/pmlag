@@ -5,6 +5,13 @@ pmlag
 pmlag is a tool for bonding network interfaces together when the hardware on
 the other side of the cable(s) doesn't support it.
 
+TL;DR;
+------
+
+```sh
+curl -sSL https://raw.githubusercontent.com/finwo/pmlag/edge/install.sh | bash
+```
+
 Getting started
 ---------------
 
