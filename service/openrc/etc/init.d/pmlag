@@ -3,7 +3,7 @@
 name=$RC_SVCNAME
 command=${DESTDIR}/bin/pmlag
 command_args="-c /etc/pmlag/pmlag.ini"
-pidfile="/run/$RC_SVCNAME/$RC_SVCNAME.pid"
+pidfile="/var/run/$RC_SVCNAME/$RC_SVCNAME.pid"
 command_background="no"
 
 depend() {

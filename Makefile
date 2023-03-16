@@ -36,12 +36,24 @@ $(BIN).1: manpage.1.md
 
 package: default
 	rm -rf package
-	mkdir -p package/pmlag
-	cp    pmlag        package/pmlag/pmlag
-	cp    pmlag.1      package/pmlag/pmlag.1
-	cp -r service      package/pmlag/service
-	cp    Makefile.pkg package/pmlag/Makefile
-	(cd package ; tar c pmlag | gzip -9 > pmlag-linux-amd64.tar.gz)
+	### linux-amd64 ###
+	mkdir -p package/pmlag-linux-amd64
+	cp    pmlag        package/pmlag-linux-amd64/pmlag
+	cp    pmlag.1      package/pmlag-linux-amd64/pmlag.1
+	cp -r service      package/pmlag-linux-amd64/service
+	cp    Makefile.pkg package/pmlag-linux-amd64/Makefile
+	(cd package ; tar c pmlag-linux-amd64 | gzip -9 > pmlag-linux-amd64.tar.gz)
+	### openwrt-amd64 ###
+	mkdir -p package/pmlag-openwrt-amd64/etc
+	mkdir -p package/pmlag-openwrt-amd64/etc/init.d
+	mkdir -p package/pmlag-openwrt-amd64/usr/bin
+	mkdir -p package/pmlag-openwrt-amd64/usr/share/man/man1
+	cp  pmlag                            package/pmlag-openwrt-amd64/usr/bin/pmlag
+	cp  pmlag.1                          package/pmlag-openwrt-amd64/usr/share/man/man1/pmlag.1
+	cp  service/openrc/etc/init.d/pmlag  package/pmlag-openwrt-amd64/etc/init.d/pmlag
+	cp  service/openrc/etc/pmlag.ini     package/pmlag-openwrt-amd64/etc/pmag.ini
+	(cd package ; tar c pmlag-openwrt-amd64 | gzip -9 > pmlag-openwrt-amd64.tar.gz)
+
 
 .PHONY: clean
 clean:
