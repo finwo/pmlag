@@ -20,4 +20,5 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
+            package/pmlag-openwrt-amd64.tar.gz
             package/pmlag-linux-amd64.tar.gz
