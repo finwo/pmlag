@@ -34,12 +34,13 @@ $(BIN).1: manpage.1.md
 	env NAME=$(BIN) envsubst < manpage.1.md | pandoc --standalone --from markdown --to man -o $(BIN).1
 	env NAME=$(BIN) envsubst < manpage.1.md | pandoc --standalone --from markdown --to html -o $(BIN).html
 
-.PHONY: package
 package: default
+	rm -rf package
 	mkdir -p package/pmlag
-	cp pmlag        package/pmlag/pmlag
-	cp pmlag.1      package/pmlag/pmlag.1
-	cp Makefile.pkg package/pmlag/Makefile
+	cp    pmlag        package/pmlag/pmlag
+	cp    pmlag.1      package/pmlag/pmlag.1
+	cp -r service      package/pmlag/service
+	cp    Makefile.pkg package/pmlag/Makefile
 	(cd package ; tar c pmlag | gzip -9 > pmlag-linux-amd64.tar.gz)
 
 .PHONY: clean
