@@ -12,5 +12,5 @@ install: default
 .PHONY: svc_openrc
 svc_openrc: default
 	DESTDIR=$(DESTDIR) envsubst < ./service/openrc/etc/init.d/pmlag > /etc/init.d/pmlag
-	DESTDIR=$(DESTDIR) envsubst < ./service/openrc/etc/pmlag.ini    > /etc/pmlag.ini
+	DESTDIR=$(DESTDIR) envsubst < ./service/common/etc/pmlag.ini    > /etc/pmlag.ini
 	DESTDIR=$(DESTDIR) envsubst '$$DESTDIR' < ./service/openrc/etc/init.d/pmlag > svc
