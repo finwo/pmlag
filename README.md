@@ -9,8 +9,12 @@ TL;DR;
 ------
 
 ```sh
-curl -sSL https://raw.githubusercontent.com/finwo/pmlag/edge/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/finwo/pmlag/edge/install.sh | sudo TARGET=<target> bash
 ```
+
+**Targets:**
+- openwrt-amd64
+- linux-amd64 (default)
 
 Getting started
 ---------------
