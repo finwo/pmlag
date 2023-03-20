@@ -16,8 +16,6 @@
 #include "iface.h"
 
 int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t buflen) {
-  /* struct sockaddr_ll saddr_ll; */
-  /* saddr_ll.sll_halen = ETH_ALEN; */
 
 #ifdef DEBUG
   // Debug: print eth header
@@ -30,7 +28,6 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
 #endif // DEBUG
 
   // Get interface to send the packet from
-  /* memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN); */
   struct pmlag_iface *iface = (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)
     ? NULL
     : rt_find(bond->rt, &(bond->mtx_rt), buffer);
@@ -45,9 +42,7 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
   if (!iface) {
     iface_entry = bond->interfaces;
     while(iface_entry) {
-      // saddr_ll.sll_ifindex = iface_entry->data->ifidx;
       send_len = sendto(iface_entry->data->sockfd, buffer, buflen, 0, NULL, 0);
-      // (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
       if(send_len != buflen) {
         perror("sendto");
         return 1;
@@ -58,9 +53,7 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
   }
 
   // Forward packet to iface as-is
-  // saddr_ll.sll_ifindex = iface->ifidx;
   send_len = sendto(iface->sockfd, buffer, buflen, 0, NULL, 0);
-  // (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll));
   if(send_len != buflen) {
     perror("sendto");
     return 1;
@@ -84,9 +77,7 @@ void * task_bond_thread(void *arg) {
   bond->rt = rt_init(bond);
 
   // Assign bond interface
-  /* unsigned char *mac = iface_mac(bond->interfaces->data->name); */
   bond->sockfd = tap_alloc(bond->name, bond->hwaddr);
-  /* free(mac); */
   if (bond->sockfd < 0) {
     perror("Allocating bond interface");
     pthread_exit(NULL);
