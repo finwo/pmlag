@@ -67,8 +67,6 @@ void * task_iface_thread(void *arg) {
   // Reserve receive buffer, support 64k packets just in case
   size_t buflen;
   unsigned char *buffer = (unsigned char *) malloc(RCVBUFSIZ);
-  struct sockaddr saddr;
-  int saddr_len  = sizeof(saddr);
 
   // Wait for the bond thread to finish initializing
   pthread_mutex_lock(&(iface->bond->mtx_rt));
@@ -80,8 +78,7 @@ void * task_iface_thread(void *arg) {
   while(1) {
 
     // Zero out buffer, to prevent pollution, & receive packet
-    /* memset(buffer, 0, RCVBUFSIZ); */
-    buflen = recvfrom(iface->sockfd, buffer, RCVBUFSIZ, 0, &saddr, (socklen_t *)&saddr_len);
+    buflen = recvfrom(iface->sockfd, buffer, RCVBUFSIZ, 0, NULL, 0);
     if (buflen < 0) {
       perror("recvfrom");
       pthread_exit(NULL);
