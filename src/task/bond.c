@@ -30,7 +30,7 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
 #endif // DEBUG
 
   // Get interface to send the packet from
-  memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN);
+  /* memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN); */
   struct pmlag_iface *iface = (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)
     ? NULL
     : rt_find(bond->rt, &(bond->mtx_rt), buffer);
