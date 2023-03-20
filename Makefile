@@ -51,7 +51,7 @@ package: default
 	cp  pmlag                            package/pmlag-openwrt-amd64/usr/bin/pmlag
 	cp  pmlag.1                          package/pmlag-openwrt-amd64/usr/share/man/man1/pmlag.1
 	cp  service/procd/etc/init.d/pmlag   package/pmlag-openwrt-amd64/etc/init.d/pmlag
-	cp  service/common/etc/pmlag.ini     package/pmlag-openwrt-amd64/etc/pmag.ini
+	cp  service/common/etc/pmlag.ini     package/pmlag-openwrt-amd64/etc/pmlag.ini
 	(cd package ; tar c pmlag-openwrt-amd64 | gzip -9 > pmlag-openwrt-amd64.tar.gz)
 
 
