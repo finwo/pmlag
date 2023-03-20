@@ -35,6 +35,10 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
   pmlag_iface_llist *iface_entry;
   size_t send_len;
 
+#ifdef DEBUG
+  printf("  got iface? %s\n", iface ? "yes" : "no");
+#endif
+
   // Broadcast on ALL interfaces if no rt entry OR broadcast packet
   if ((!iface) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) {
     iface_entry = bond->interfaces;
