@@ -14,17 +14,12 @@ static int rt_compare(const void *a, const void *b, void *udata) {
   // Attempt without memcmp (faster)
   if (a == b) return 0;
 
-  /* printf("\nCMP\n  A = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n  B = %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", */
-  /*   ta->mac[0],ta->mac[1],ta->mac[2],ta->mac[3],ta->mac[4],ta->mac[5], */
-  /*   tb->mac[0],tb->mac[1],tb->mac[2],tb->mac[3],tb->mac[4],tb->mac[5] */
-  /* ); */
-
   return memcmp(ta->mac, tb->mac, ETH_ALEN);
 }
 
 static void rt_purge(const void *item, void *udata) {
   struct pmlag_rt_entry *rt_entry = (struct pmlag_rt_entry *)item;
-  pmlag_iface_llist *iface_entry;
+  /* pmlag_iface_llist *iface_entry; */
 
 /* #ifdef DEBUG */
 /*   printf("PURGE %.2x:%.2x:%.2x:%.2x:%.2x:%.2x -- %p\n", */
@@ -39,11 +34,12 @@ static void rt_purge(const void *item, void *udata) {
 /* #endif */
 
   // Free all iface entries in the rt_entry
-  while(rt_entry->interfaces) {
-    iface_entry          = rt_entry->interfaces;
-    rt_entry->interfaces = iface_entry->next;
-    free(iface_entry);
-  }
+  free(rt_entry->interfaces);
+  /* while(rt_entry->interfaces) { */
+  /*   iface_entry          = rt_entry->interfaces; */
+  /*   rt_entry->interfaces = iface_entry->next; */
+  /*   free(iface_entry); */
+  /* } */
 
   // Free remainder
   free(rt_entry->mac);
@@ -86,7 +82,7 @@ int rt_upsert(
     rt_entry             = calloc(1, sizeof(struct pmlag_rt_entry));
     rt_entry->mac        = malloc(ETH_ALEN);
     rt_entry->bcidx      = 0;
-    rt_entry->interfaces = NULL;
+    rt_entry->interfaces = calloc(iface->bond->iface_cnt, sizeof(struct pmlag_iface *));
     memcpy(rt_entry->mac, mac, ETH_ALEN);
     isnew = 1;
   }
@@ -99,33 +95,43 @@ int rt_upsert(
 /* #ifdef DEBUG */
 /*     printf("  Bail, %d, %d\n\n", bcidx, rt_entry->bcidx); */
 /* #endif */
+    // Caution: possible memory leak
     pthread_mutex_unlock(mtx);
     return 0;
   }
 
   // Clear list of known interfaces if
-  pmlag_iface_llist *iface_entry;
+  /* pmlag_iface_llist *iface_entry; */
   if (
     (bcidx && (rt_entry->bcidx != bcidx)) || // We got a NEW broadcast index
     (!bcidx && (rt_entry->bcidx == 0))       // Or we're updating a non-pmlag remote
   ) {
-    // Free list 1-by-1
-    while(rt_entry->interfaces) {
-      iface_entry          = rt_entry->interfaces;
-      rt_entry->interfaces = iface_entry->next;
-      free(iface_entry);
-    }
+    rt_entry->iface_cnt = 0;
+    /* // Free list 1-by-1 */
+    /* while(rt_entry->interfaces) { */
+    /*   iface_entry          = rt_entry->interfaces; */
+    /*   rt_entry->interfaces = iface_entry->next; */
+    /*   free(iface_entry); */
+    /* } */
   }
 
   // Update the rt_entry's broadcast index
   rt_entry->bcidx = bcidx;
 
+  // Bail if rt_entry->iface_cnt+1 lg bond->iface_cnt
+  if ((rt_entry->iface_cnt + 1) > iface->bond->iface_cnt) {
+    // Caution: possible memory leak
+    pthread_mutex_unlock(mtx);
+    return 0;
+  }
+
   // Add our iface to the entry's interface list
-  iface_entry          = malloc(sizeof(pmlag_iface_llist));
-  iface_entry->next    = rt_entry->interfaces;
-  iface_entry->data    = iface;
-  iface_entry->l       = rt_entry->interfaces ? ((pmlag_iface_llist *)iface_entry->next)->l + 1 : 1;
-  rt_entry->interfaces = iface_entry;
+  rt_entry->interfaces[rt_entry->iface_cnt] = iface;
+  rt_entry->iface_cnt++;
+  /* iface_entry          = malloc(sizeof(pmlag_iface_llist)); */
+  /* iface_entry->next    = rt_entry->interfaces; */
+  /* iface_entry->data    = iface; */
+  /* rt_entry->interfaces = iface_entry; */
 
   // Ensure the entry is in the rt
   if (isnew) {
@@ -155,7 +161,7 @@ struct pmlag_iface * rt_find(
   // Lock the routing table
   pthread_mutex_lock(mtx);
   struct pmlag_rt_entry *rt_entry;
-  int llist_len = 0;
+  /* int llist_len = 0; */
 
   // Attempt to fetch the rt entry
   rt_entry = mindex_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
@@ -164,21 +170,23 @@ struct pmlag_iface * rt_find(
     return NULL;
   }
 
-  // Get the list length
-  pmlag_iface_llist *iface_entry = rt_entry->interfaces;
-  while(iface_entry) {
-    llist_len++;
-    iface_entry = iface_entry->next;
-  }
+  /* // Get the list length */
+  /* pmlag_iface_llist *iface_entry = rt_entry->interfaces; */
+  /* while(iface_entry) { */
+  /*   llist_len++; */
+  /*   iface_entry = iface_entry->next; */
+  /* } */
 
   // Select an interface at random
-  int sel = rand() % llist_len;
-  iface_entry = rt_entry->interfaces;
-  while(sel--) {
-    iface_entry = iface_entry->next;
-  }
+  int sel = rand() % rt_entry->iface_cnt;
+
+  /* iface_entry = rt_entry->interfaces; */
+  /* while(sel--) { */
+  /*   iface_entry = iface_entry->next; */
+  /* } */
 
   // Unlock the routing table again
   pthread_mutex_unlock(mtx);
-  return iface_entry->data;
+  /* return iface_entry->data; */
+  return rt_entry->interfaces[sel];
 }

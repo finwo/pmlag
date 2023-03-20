@@ -23,7 +23,7 @@ extern "C" {
 #define RT_MAX_ENTRIES 64
 #endif
 
-typedef LLIST(int l; struct pmlag_iface) pmlag_iface_llist;
+typedef LLIST(struct pmlag_iface) pmlag_iface_llist;
 
 struct pmlag_iface {
   char *name;              // name of the interface this object represents

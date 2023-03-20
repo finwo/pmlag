@@ -6,9 +6,10 @@
 #include "finwo/mindex.h"
 
 struct pmlag_rt_entry {
-  unsigned char *mac;            // mac address of the remote entity
-  int16_t bcidx;                 // broadcast index last seen from the mac
-  pmlag_iface_llist *interfaces; // list of pointers to interfaces
+  unsigned char *mac;              // mac address of the remote entity
+  int16_t bcidx;                   // broadcast index last seen from the mac
+  int16_t iface_cnt;               // amount of interfaces this mac is available on
+  struct pmlag_iface **interfaces; // list of pointers to interfaces
 };
 
 struct mindex_t * rt_init(void *udata);
