@@ -31,7 +31,9 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
 
   // Get interface to send the packet from
   memcpy(saddr_ll.sll_addr, buffer, ETH_ALEN);
-  struct pmlag_iface *iface = rt_find(bond->rt, &(bond->mtx_rt), buffer);
+  struct pmlag_iface *iface = (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)
+    ? NULL
+    : rt_find(bond->rt, &(bond->mtx_rt), buffer);
   pmlag_iface_llist *iface_entry;
   size_t send_len;
 
@@ -40,7 +42,7 @@ int task_bond_onpacket(struct pmlag_bond *bond, unsigned char *buffer, size_t bu
 #endif
 
   // Broadcast on ALL interfaces if no rt entry OR broadcast packet
-  if ((!iface) || (memcmp(buffer, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)) {
+  if (!iface) {
     iface_entry = bond->interfaces;
     while(iface_entry) {
       saddr_ll.sll_ifindex = iface_entry->data->ifidx;
