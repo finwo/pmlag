@@ -45,6 +45,7 @@ struct pmlag_bond {
   pthread_mutex_t mtx_rt;        // lock for the routing table of the bond
   struct mindex_t *rt;           // pointer to the routing table
   pmlag_iface_llist *interfaces; // linked-list of interfaces contained in the bond
+  int iface_cnt;                 // track the number of interfaces in this bond
 };
 
 struct pmlag_configuration {

@@ -71,6 +71,7 @@ static int config_load_handler(
       iface_entry->data       = calloc(1, sizeof(struct pmlag_iface));
       iface_entry->data->name = strdup(value);
       iface_entry->data->bond = bond;
+      bond->iface_cnt++;
     }
 
   } else if (!strcmp(name, "hwaddr")) {
