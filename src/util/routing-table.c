@@ -10,11 +10,18 @@
 static int rt_compare(const void *a, const void *b, void *udata) {
   struct pmlag_rt_entry *ta = (struct pmlag_rt_entry *)a;
   struct pmlag_rt_entry *tb = (struct pmlag_rt_entry *)b;
+  int result;
 
-  // Attempt without memcmp (faster)
+  // Same pointer = match
   if (a == b) return 0;
 
-  return memcmp(ta->mac, tb->mac, ETH_ALEN);
+  // Check for ETH_ALEN, unrolled memcmp
+  if (( result = ((int)ta->mac[0] - (int)tb->mac[0]) )) return result;
+  if (( result = ((int)ta->mac[1] - (int)tb->mac[1]) )) return result;
+  if (( result = ((int)ta->mac[2] - (int)tb->mac[2]) )) return result;
+  if (( result = ((int)ta->mac[3] - (int)tb->mac[3]) )) return result;
+  if (( result = ((int)ta->mac[4] - (int)tb->mac[4]) )) return result;
+  return (int)ta->mac[5] - (int)tb->mac[5];
 }
 
 static void rt_purge(const void *item, void *udata) {
