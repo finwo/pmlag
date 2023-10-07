@@ -1,5 +1,2 @@
 /bak/
-/lib/
-/pmlag
-*.o
-/package/
+/build/

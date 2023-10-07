@@ -5,20 +5,32 @@ on:
     tags:
       - stable
       - edge
+
 jobs:
-  attach_asset:
-    name: Attach assets to release
-    runs-on: ubuntu-latest
+  publish:
+    name: Publish for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-glibc-amd64
+          - os: alpine-latest
+            target: linux-musl-amd64
     steps:
       - uses: actions/checkout@v3
       - uses: finwo/dep@edge
-      - run: dep install
-      - run: make clean
-      - run: make package
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
+      - name: Build generic package
+        run: make package SVC=generic
+      - name: Build openrc package
+        run: make package SVC=openrc
+      - name: Build procd package
+        run: make package SVC=procd
+      - name: Upload packages to release
+        uses: svenstaro/upload-release-action@v2
         with:
-          files: |
-            package/pmlag-openwrt-amd64.tar.gz
-            package/pmlag-linux-amd64.tar.gz
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: build/${{ matrix.target }}/pmlag-*-${{ matrix.target }}.tar.gz
+          file_glob: true
+          overwrite: true
+          tag: ${{ github.ref }}

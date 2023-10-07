@@ -1,0 +1,7 @@
+default:
+	# Run 'make install' to install this package
+
+.PHONY: install
+install: default
+	install pmlag   $(DESTDIR)/bin
+	install pmlag.1 $(DESTDIR)/share/man/man1
