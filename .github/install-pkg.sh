@@ -6,7 +6,7 @@ os="unknown"
 # Basic OS detection
 if command -v apt-get &>/dev/null; then
   # Debian or it's derivatives
-  install_cmd="apt-get install -yq"
+  install_cmd="sudo apt-get install -yq"
   os="debian"
 elif command -v apk &>/dev/null; then
   # Alpine
