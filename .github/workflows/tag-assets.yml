@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: finwo/dep@edge
+      - name: Install pandoc
+        run: ./.github/install-pkg.sh pandoc
       - name: Build generic package
         run: make package SVC=generic
       - name: Build openrc package
