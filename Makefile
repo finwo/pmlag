@@ -54,7 +54,6 @@ package: default
 	cp  service/common/etc/pmlag.ini     package/pmlag-openwrt-amd64/etc/pmlag.ini
 	(cd package ; tar c pmlag-openwrt-amd64 | gzip -9 > pmlag-openwrt-amd64.tar.gz)
 
-
 .PHONY: clean
 clean:
 	rm -f $(OBJ)
