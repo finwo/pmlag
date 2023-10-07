@@ -27,7 +27,7 @@ include Makefile.pkg
 	$(CC) $(CFLAGS) $(@:.o=.c) -D__NAME=\"$(BIN)\" -c -o $@
 
 $(BIN): $(OBJ)
-	$(CC) $(CFLAGS) $(OBJ) -o $@
+	$(CC) $(CFLAGS) $(OBJ) --static -o $@
 
 # Build manpage
 $(BIN).1: manpage.1.md
