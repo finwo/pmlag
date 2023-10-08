@@ -43,6 +43,8 @@ jobs:
         shell: alpine.sh --root {0}
         run: |
           ./.github/install-pkg.sh bash
+          ./.github/install-pkg.sh binutils
+          ./.github/install-pkg.sh coreutils
           ./.github/install-pkg.sh pandoc
           ./.github/install-pkg.sh build-base
           ./.github/install-pkg.sh curl
