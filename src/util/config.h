@@ -3,6 +3,9 @@
 
 struct pmlag_iface {
   char *name;
+  struct pmlag_bond *bond;
+  int sockfd;
+  struct epoll_event *epev;
   /* /1* int   weight;            // weight of this interface within the bond *1/ */
   /* int   sockfd;            // file descriptor for the iface raw socket */
   /* int   ifidx;             // index of the interface within the socket */

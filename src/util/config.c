@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 
 #include "benhoyt/inih.h"
 
 #include "config.h"
+#include "socket.h"
 
 static int config_load_handler(
   void *user,
@@ -60,6 +62,7 @@ static int config_load_handler(
       bond->iface                      = realloc(bond->iface, (bond->iface_count + 1) * sizeof(void*));
       bond->iface[bond->iface_count  ] = NULL;
       iface->name                      = strdup(value);
+      iface->bond                      = bond;
     }
 
   } else if (!strcmp(name, "hwaddr")) {
@@ -72,12 +75,21 @@ static int config_load_handler(
       }
     }
 
+    if (bond->hwaddr) {
+      printf("Already had MAC: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
+        bond->hwaddr[0],
+        bond->hwaddr[1],
+        bond->hwaddr[2],
+        bond->hwaddr[3],
+        bond->hwaddr[4],
+        bond->hwaddr[5]
+      );
+    }
+
     if (iface) {
       // Got interface by that name = use it's hwaddr
       if (bond->hwaddr) free(bond->hwaddr);
-      bond->hwaddr = NULL;
-      /* bond->hwaddr = iface_mac(iface_entry->data->name); */
-      printf("TODO: get mac from %s\n", iface->name);
+      bond->hwaddr = iface_mac(iface->name);
     } else if (!strcmp(value, "random")) {
       // "random" = null, a.k.a. let the kernel generate a random mac
       if (bond->hwaddr) free(bond->hwaddr);
