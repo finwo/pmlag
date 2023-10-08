@@ -42,6 +42,7 @@ jobs:
         name: Install pandoc (alpine)
         shell: alpine.sh --root {0}
         run: |
+          ./.github/install-pkg.sh bash
           ./.github/install-pkg.sh pandoc
           ./.github/install-pkg.sh build-base
           ./.github/install-pkg.sh wget
