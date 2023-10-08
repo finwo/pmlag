@@ -1,4 +1,5 @@
 ---
+
 name: Tag Assets
 on:
   push:
@@ -7,27 +8,48 @@ on:
       - edge
 
 jobs:
-  publish:
-    name: Publish for ${{ matrix.target }}
+
+  build-packages:
+    name: Attach packages to release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
           - os: ubuntu-latest
+            arch: none  # Default back to amd64
             target: linux-glibc-amd64
-          - os: alpine-latest
+            shell: bash
+          - os: ubuntu-latest
+            arch: x86_64
             target: linux-musl-amd64
+            shell: alpine.sh {0}
     steps:
       - uses: actions/checkout@v3
       - uses: finwo/dep@edge
+      - uses: jirutka/setup-alpine@v1
+        with:
+          branch: v3.18
+          arch: ${{ matrix.arch }}
+
+      # TODO: run uraimo/run-on-arch-action@v2 for bash/glibc
+      # TODO: run setup-alpine only for musl
+
       - name: Install pandoc
         run: ./.github/install-pkg.sh pandoc
+        shell: ${{ matrix.shell }}
+
       - name: Build generic package
-        run: make package SVC=generic
+        run: make package TARGET=${{ matrix.target }} SVC=generic
+        shell: ${{ matrix.shell }}
+
       - name: Build openrc package
-        run: make package SVC=openrc
+        run: make package TARGET=${{ matrix.target }} SVC=openrc
+        shell: ${{ matrix.shell }}
+
       - name: Build procd package
-        run: make package SVC=procd
+        run: make package TARGET=${{ matrix.target }} SVC=procd
+        shell: ${{ matrix.shell }}
+
       - name: Upload packages to release
         uses: svenstaro/upload-release-action@v2
         with:
