@@ -35,23 +35,23 @@ jobs:
       # TODO: run setup-alpine only for musl
 
       - if: ${{ matrix.mode == 'native' }}
-        name: Install pandoc
+        name: Install pandoc (native)
         run: ./.github/install-pkg.sh pandoc
 
       - if: ${{ matrix.mode == 'alpine' }}
-        name: Install pandoc
+        name: Install pandoc (alpine)
         shell: alpine.sh {0}
         run: ./.github/install-pkg.sh pandoc
 
       - if: ${{ matrix.mode == 'native' }}
-        name: Build generic package
+        name: Build generic package (native)
         run: |
           make package TARGET=${{ matrix.target }} SVC=generic
           make package TARGET=${{ matrix.target }} SVC=openrc
           make package TARGET=${{ matrix.target }} SVC=procd
 
       - if: ${{ matrix.mode == 'alpine' }}
-        name: Build generic package
+        name: Build generic package (alpine)
         shell: alpine.sh {0}
         run: |
           make package TARGET=${{ matrix.target }} SVC=generic
