@@ -41,7 +41,9 @@ jobs:
       - if: ${{ matrix.mode == 'alpine' }}
         name: Install pandoc (alpine)
         shell: alpine.sh --root {0}
-        run: ./.github/install-pkg.sh pandoc
+        run: |
+          ./.github/install-pkg.sh pandoc
+          ./.github/install-pkg.sh build-base
 
       - if: ${{ matrix.mode == 'native' }}
         name: Build generic package (native)
