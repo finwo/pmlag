@@ -47,6 +47,7 @@ jobs:
           ./.github/install-pkg.sh build-base
           ./.github/install-pkg.sh coreutils
           ./.github/install-pkg.sh curl
+          ./.github/install-pkg.sh envsubst
           ./.github/install-pkg.sh linux-headers
           ./.github/install-pkg.sh pandoc
 
