@@ -1,11 +1,10 @@
-#include <linux/if_ether.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "benhoyt/inih.h"
+
 #include "config.h"
-#include "socket.h"
 
 static int config_load_handler(
   void *user,
@@ -13,85 +12,79 @@ static int config_load_handler(
   const char *name,
   const char *value
 ) {
+  struct pmlag_bond  *bond  = NULL;
+  struct pmlag_iface *iface = NULL;
+  int bond_idx = 0;
+  int iface_idx = 0;
   struct pmlag_configuration* config = (struct pmlag_configuration *) user;
+  printf("[%s].%s: %s\n", section, name, value);
 
-  // Get bond being configured
-  struct pmlag_bond *bond = config->bonds;
-  while(bond) {
-    if (!strcmp(bond->name, section)) {
+  // Ensure we have a bond list
+  if (!config->bond) config->bond = calloc(1, sizeof(void*));
+
+  // Find the bond being configured
+  for( bond_idx = 0 ; bond_idx < config->bond_count ; bond_idx ++ ) {
+    if (!strcmp(config->bond[bond_idx]->name, section)) {
+      bond = config->bond[bond_idx];
       break;
     }
-    bond = bond->next;
   }
 
   // Create bond if not found
   if (!bond) {
-    bond          = calloc(1, sizeof(struct pmlag_bond));
-    bond->next    = config->bonds;
-    bond->name    = strdup(section);
-    config->bonds = bond;
+    config->bond[config->bond_count++] = bond = calloc(1, sizeof(struct pmlag_bond));
+    config->bond                       = realloc(config->bond, (config->bond_count + 1) * sizeof(void*));
+    config->bond[config->bond_count  ] = NULL;
+    bond->name                         = strdup(section);
   }
-
-  // Get interface being configured
-  pmlag_iface_llist *iface_entry = bond->interfaces;
 
   if (0) {
     // Intentionally empty
-  } else if (!strcmp(name, "mode")) {
-    // Set the mode according to found value
-    if (0) {
-      // Intentionally empty
-    } else if (!strcmp(value, "active-backup")) {
-      bond->mode = PMLAG_MODE_ACTIVE_BACKUP;
-    } else if (!strcmp(value, "balanced-rr")) {
-      bond->mode = PMLAG_MODE_BALANCED_RR;
-    } else if (!strcmp(value, "broadcast")) {
-      bond->mode = PMLAG_MODE_BROADCAST;
-    } else {
-      return 0;
-    }
 
   } else if (!strcmp(name, "interface")) {
 
-    // Select the right interface
-    while(iface_entry) {
-      if (!strcmp(iface_entry->data->name, value)) {
+    // Ensure we have an iface list
+    if (!bond->iface) bond->iface = calloc(1, sizeof(void*));
+
+    // Find the interface you're referencing
+    for( iface_idx = 0 ; iface_idx < bond->iface_count ; iface_idx ++ ) {
+      if (!strcmp(config->bond[bond_idx]->iface[iface_idx]->name, value)) {
+        iface = config->bond[bond_idx]->iface[iface_idx];
         break;
       }
-      iface_entry = iface_entry->next;
     }
 
-    // Create iface if not found
-    if (!iface_entry) {
-      // Create the list entry
-      iface_entry = calloc(1, sizeof(pmlag_iface_llist));
-      iface_entry->next = bond->interfaces;
-      bond->interfaces  = iface_entry;
-      // Create the iface
-      iface_entry->data       = calloc(1, sizeof(struct pmlag_iface));
-      iface_entry->data->name = strdup(value);
-      iface_entry->data->bond = bond;
-      bond->iface_cnt++;
+    // Create bond if not found
+    if (!iface) {
+      bond->iface[bond->iface_count++] = iface = calloc(1, sizeof(struct pmlag_iface));
+      bond->iface                      = realloc(bond->iface, (bond->iface_count + 1) * sizeof(void*));
+      bond->iface[bond->iface_count  ] = NULL;
+      iface->name                      = strdup(value);
     }
 
   } else if (!strcmp(name, "hwaddr")) {
 
-    // Find iface with name == value
-    iface_entry = bond->interfaces;
-    while(iface_entry) {
-      if (!strcmp(iface_entry->data->name, value)) break;
-      iface_entry = iface_entry->next;
+    // Find the interface you're referencing
+    for( iface_idx = 0 ; iface_idx < bond->iface_count ; iface_idx ++ ) {
+      if (!strcmp(config->bond[bond_idx]->iface[iface_idx]->name, value)) {
+        iface = config->bond[bond_idx]->iface[iface_idx];
+        break;
+      }
     }
 
-    if (iface_entry) {
+    if (iface) {
       // Got interface by that name = use it's hwaddr
-      bond->hwaddr = iface_mac(iface_entry->data->name);
+      if (bond->hwaddr) free(bond->hwaddr);
+      bond->hwaddr = NULL;
+      /* bond->hwaddr = iface_mac(iface_entry->data->name); */
+      printf("TODO: get mac from %s\n", iface->name);
     } else if (!strcmp(value, "random")) {
       // "random" = null, a.k.a. let the kernel generate a random mac
       if (bond->hwaddr) free(bond->hwaddr);
       bond->hwaddr = NULL;
     } else {
       // xx:xx:xx:xx:xx:xx
+      if (bond->hwaddr) free(bond->hwaddr);
       bond->hwaddr = (unsigned char *)malloc(6); // ETH_ALEN should be 6, but this is safer
       sscanf(value, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
         &(bond->hwaddr[0]),
@@ -102,21 +95,18 @@ static int config_load_handler(
         &(bond->hwaddr[5])
       );
     }
-
-  } else {
-    // Unknown key
-    return 0;
   }
 
   return 1;
 }
 
-struct pmlag_configuration * config_load(const char * filename) {
+struct pmlag_configuration * config_load(char * filepath, struct pmlag_configuration *config) {
   // Load config, entry-by-entry
-  struct pmlag_configuration *config = calloc(1, sizeof(struct pmlag_configuration));
-  if (ini_parse(filename, config_load_handler, config) < 0) {
-    fprintf(stderr, "Can not load %s\n", filename);
+  if (!config) config = calloc(1, sizeof(struct pmlag_configuration));
+  if (ini_parse(filepath, config_load_handler, config) < 0) {
+    fprintf(stderr, "Can not load %s\n", filepath);
     return NULL;
   }
   return config;
 }
+

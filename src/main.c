@@ -1,24 +1,9 @@
-// vim: fdm=marker
-
-#include <arpa/inet.h>
-#include <errno.h>
-#include <linux/if_ether.h>
-#include <linux/if_packet.h>
-#include <net/if.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <pthread.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <stdlib.h>
 
 #include "cofyc/argparse.h"
-#include "util/config.h"
 
-#include "task/bond.h"
+#include "util/config.h"
 
 static const char *const usage[] = {
   __NAME " [options]",
@@ -54,30 +39,20 @@ int main(int argc, const char **argv) {
   argc = argparse_parse(&argparse, argc, argv);
 
   // Load configuration file
-  struct pmlag_configuration *config = config_load(config_file);
+  struct pmlag_configuration *config = config_load(config_file, NULL);
   if (!config) {
     return 1;
   }
 
-  // Initialize interfaces for all configured bonds
-  struct pmlag_bond *bond = config->bonds;
-  while(bond) {
-
-    // Start the bond's thread
-    if(pthread_create(&(bond->tid_bond), NULL, task_bond_thread, bond)) {
-      perror("Starting bond thread");
-      return 1;
+  // Display bonds
+  int b = 0;
+  int i = 0;
+  for( b = 0 ; b < config->bond_count ; b++ ) {
+    printf("%s\n", config->bond[b]->name);
+    for( i = 0 ; i < config->bond[b]->iface_count ; i++ ) {
+      printf("  - %s\n", config->bond[b]->iface[i]->name);
     }
-
-    bond = bond->next;
   }
 
-  // Wait for all bonds to finish
-  bond = config->bonds;
-  while(bond) {
-    pthread_join(bond->tid_bond, NULL);
-    bond = bond->next;
-  }
-
-  return 0;
+  return 69;
 }

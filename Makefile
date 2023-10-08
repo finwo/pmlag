@@ -35,40 +35,12 @@ build/${TARGET}: $(wildcard src/*.c src/*.h src/*/*.c src/*/*.h)
 	cp -rT arch/${TARGET}/ build/${TARGET}
 	cp -rT arch/${TARGET}/ build/${TARGET}
 
-build/${TARGET}/pmlag: build/${TARGET}
+build/${TARGET}/pmlag: build/${TARGET} $(wildcard build/${TARGET}/src/*.c build/${TARGET}/src/*.h build/${TARGET}/src/*/*.c build/${TARGET}/src/*/*.h)
 	cd build/${TARGET} && dep install
 	$(MAKE) --directory build/${TARGET} TARGET=${TARGET}
 
 build/${TARGET}/pmlag-${SVC}-${TARGET}.tar.gz: build/${TARGET}/pmlag
 	$(MAKE) --directory build/${TARGET} TARGET=${TARGET} SVC=${SVC} pmlag-${SVC}-${TARGET}.tar.gz
-
-# include Makefile.pkg
-
-# %.o: %.c $(LIBS)
-# 	$(CC) $(CFLAGS) $(@:.o=.c) -D__NAME=\"$(BIN)\" -c -o $@
-
-# $(BIN): $(OBJ)
-# 	$(CC) $(CFLAGS) $(OBJ) --static -o $@
-
-# # Build manpage
-# $(BIN).1: manpage.1.md
-# 	env NAME=$(BIN) envsubst < manpage.1.md | pandoc --standalone --from markdown --to man -o $(BIN).1
-# 	env NAME=$(BIN) envsubst < manpage.1.md | pandoc --standalone --from markdown --to html -o $(BIN).html
-
-# package: default
-# 	rm -rf package
-
-
-# 	### openwrt-amd64 ###
-# 	mkdir -p package/pmlag-openwrt-amd64/etc
-# 	mkdir -p package/pmlag-openwrt-amd64/etc/init.d
-# 	mkdir -p package/pmlag-openwrt-amd64/usr/bin
-# 	mkdir -p package/pmlag-openwrt-amd64/usr/share/man/man1
-# 	cp  pmlag                            package/pmlag-openwrt-amd64/usr/bin/pmlag
-# 	cp  pmlag.1                          package/pmlag-openwrt-amd64/usr/share/man/man1/pmlag.1
-# 	cp  service/procd/etc/init.d/pmlag   package/pmlag-openwrt-amd64/etc/init.d/pmlag
-# 	cp  service/common/etc/pmlag.ini     package/pmlag-openwrt-amd64/etc/pmlag.ini
-# 	(cd package ; tar c pmlag-openwrt-amd64 | gzip -9 > pmlag-openwrt-amd64.tar.gz)
 
 .PHONY: clean
 clean:
