@@ -35,19 +35,20 @@ jobs:
       # TODO: run setup-alpine only for musl
 
       - if: ${{ matrix.mode == 'native' }}
-        name: Install pandoc (native)
+        name: Install required packages (native)
         run: ./.github/install-pkg.sh pandoc
 
       - if: ${{ matrix.mode == 'alpine' }}
-        name: Install pandoc (alpine)
+        name: Install required packages (alpine)
         shell: alpine.sh --root {0}
         run: |
           ./.github/install-pkg.sh bash
           ./.github/install-pkg.sh binutils
-          ./.github/install-pkg.sh coreutils
-          ./.github/install-pkg.sh pandoc
           ./.github/install-pkg.sh build-base
+          ./.github/install-pkg.sh coreutils
           ./.github/install-pkg.sh curl
+          ./.github/install-pkg.sh linux-headers
+          ./.github/install-pkg.sh pandoc
 
       - uses: finwo/dep@edge
         name: Install dep (native)
