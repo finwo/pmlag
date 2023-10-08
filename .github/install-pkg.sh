@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 install_cmd=""
 os="unknown"
@@ -24,13 +24,11 @@ if [ "unknown" == "$os" ]; then
   exit 1;
 fi
 
-# Catch alternative packages
-declare -A pkg_alt
-# pkg_alt["void_pandoc"]="panini"
-if [ -z "${pkg_alt[${os}_${1}]}" ]; then
-  pkg=$1
-else
-  pkg="${pkg_alt[${os}_${1}]}"
-fi
+pkg=${1}
+case "${os}_${1}" in
+  # void_pandoc) pkg="panini" ;;
+  *) # Intentionally empty
+    ;;
+esac
 
 ${install_cmd} ${pkg}
