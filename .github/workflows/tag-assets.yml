@@ -18,11 +18,11 @@ jobs:
           - os: ubuntu-latest
             arch: x86_64
             target: linux-glibc-amd64
-            shell: /usr/bin/bash -e {0}
+            mode: native
           - os: ubuntu-latest
             arch: x86_64
             target: linux-musl-amd64
-            shell: alpine.sh {0}
+            mode: alpine
     steps:
       - uses: actions/checkout@v3
       - uses: finwo/dep@edge
@@ -34,21 +34,29 @@ jobs:
       # TODO: run uraimo/run-on-arch-action@v2 for bash/glibc
       # TODO: run setup-alpine only for musl
 
-      - name: Install pandoc
+      - if: ${{ matrix.mode == 'native' }}
+        name: Install pandoc
         run: ./.github/install-pkg.sh pandoc
-        shell: ${{ matrix.shell }}
 
-      - name: Build generic package
-        run: make package TARGET=${{ matrix.target }} SVC=generic
-        shell: ${{ matrix.shell }}
+      - if: ${{ matrix.mode == 'alpine' }}
+        name: Install pandoc
+        shell: alpine.sh {0}
+        run: ./.github/install-pkg.sh pandoc
 
-      - name: Build openrc package
-        run: make package TARGET=${{ matrix.target }} SVC=openrc
-        shell: ${{ matrix.shell }}
+      - if: ${{ matrix.mode == 'native' }}
+        name: Build generic package
+        run: |
+          make package TARGET=${{ matrix.target }} SVC=generic
+          make package TARGET=${{ matrix.target }} SVC=openrc
+          make package TARGET=${{ matrix.target }} SVC=procd
 
-      - name: Build procd package
-        run: make package TARGET=${{ matrix.target }} SVC=procd
-        shell: ${{ matrix.shell }}
+      - if: ${{ matrix.mode == 'alpine' }}
+        name: Build generic package
+        shell: alpine.sh {0}
+        run: |
+          make package TARGET=${{ matrix.target }} SVC=generic
+          make package TARGET=${{ matrix.target }} SVC=openrc
+          make package TARGET=${{ matrix.target }} SVC=procd
 
       - name: Upload packages to release
         uses: svenstaro/upload-release-action@v2
