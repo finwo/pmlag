@@ -45,7 +45,7 @@ jobs:
           ./.github/install-pkg.sh bash
           ./.github/install-pkg.sh pandoc
           ./.github/install-pkg.sh build-base
-          ./.github/install-pkg.sh wget
+          ./.github/install-pkg.sh curl
 
       - uses: finwo/dep@edge
         name: Install dep (native)
@@ -55,7 +55,7 @@ jobs:
         name: Install dep (alpine)
         shell: alpine.sh --root {0}
         run: |
-          wget https://raw.githubusercontent.com/finwo/dep/edge/dist/dep -O /usr/bin/dep
+          curl -sSL https://raw.githubusercontent.com/finwo/dep/edge/dist/dep -o /usr/bin/dep
           chmod +x /usr/bin/dep
 
       - if: ${{ matrix.mode == 'native' }}
