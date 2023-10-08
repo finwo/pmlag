@@ -25,8 +25,8 @@ jobs:
             mode: alpine
     steps:
       - uses: actions/checkout@v3
-      - uses: finwo/dep@edge
       - uses: jirutka/setup-alpine@v1
+        if: ${{ matrix.mode == 'alpine' }}
         with:
           branch: v3.18
           arch: ${{ matrix.arch }}
@@ -44,6 +44,18 @@ jobs:
         run: |
           ./.github/install-pkg.sh pandoc
           ./.github/install-pkg.sh build-base
+          ./.github/install-pkg.sh wget
+
+      - uses: finwo/dep@edge
+        name: Install dep (native)
+        if: ${{ matrix.mode == 'native' }}
+
+      - if: ${{ matrix.mode == 'alpine' }}
+        name: Install dep (alpine)
+        shell: alpine.sh --root {0}
+        run: |
+          wget https://raw.githubusercontent.com/finwo/dep/edge/dist/dep -O /usr/bin/dep
+          chmod +x /usr/bin/dep
 
       - if: ${{ matrix.mode == 'native' }}
         name: Build generic package (native)
