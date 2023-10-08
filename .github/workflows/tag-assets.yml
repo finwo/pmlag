@@ -16,9 +16,9 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            arch: none  # Default back to amd64
+            arch: x86_64
             target: linux-glibc-amd64
-            shell: bash
+            shell: /usr/bin/bash -e {0}
           - os: ubuntu-latest
             arch: x86_64
             target: linux-musl-amd64
