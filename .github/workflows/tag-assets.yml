@@ -40,7 +40,7 @@ jobs:
 
       - if: ${{ matrix.mode == 'alpine' }}
         name: Install pandoc (alpine)
-        shell: alpine.sh {0}
+        shell: alpine.sh --root {0}
         run: ./.github/install-pkg.sh pandoc
 
       - if: ${{ matrix.mode == 'native' }}
