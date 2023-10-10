@@ -96,3 +96,61 @@ int sockraw_open(char * ifname) {
   // Return the prepared socket
   return sockfd;
 }
+
+int tap_alloc(char * ifname, unsigned char * mac) {
+  struct ifreq ifr;
+  int fd, err;
+
+  if( (fd = open("/dev/net/tun", O_RDWR)) < 0 ) {
+    perror("Open tun");
+    return -1;
+  }
+
+  // Bring up the interface
+  memset(&ifr, 0, sizeof(ifr));
+  ifr.ifr_flags = IFF_TAP | IFF_MULTI_QUEUE | IFF_NO_PI;
+  if( *ifname ) {
+    strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
+  }
+  if( (err = ioctl(fd, TUNSETIFF, (void *) &ifr)) < 0 ){
+    perror("Open tun");
+    close(fd);
+    return err;
+  }
+  strcpy(ifname, ifr.ifr_name);
+
+  // Set the interface's mac address
+  if ( mac ) {
+    // TODO: random, copied or specific mac address pulled from ini
+    memset(&ifr, 0, sizeof(ifr));
+    strcpy(ifr.ifr_name, ifname);
+    ifr.ifr_hwaddr.sa_family = ARPHRD_ETHER;
+    memcpy(ifr.ifr_hwaddr.sa_data, mac, ETH_ALEN);
+    if ((err = if_ioctl(SIOCSIFHWADDR, &ifr)) < 0) {
+      perror("Set if hwaddr");
+      close(fd);
+      return err;
+    }
+  }
+
+  // Fetch the current flags
+  memset(&ifr, 0, sizeof(ifr));
+  strcpy(ifr.ifr_name, ifname);
+  if (if_ioctl(SIOCGIFFLAGS, &ifr) < 0) {
+    perror("failed to get the interface flags");
+    close(fd);
+    return err;
+  }
+
+  // Bring up the interface
+  if (!(ifr.ifr_flags & IFF_UP)) {
+    ifr.ifr_flags |= IFF_UP;
+    if (if_ioctl(SIOCSIFFLAGS, &ifr) < 0) {
+      perror("failed to get the interface flags");
+      close(fd);
+      return err;
+    }
+  }
+
+  return fd;
+}

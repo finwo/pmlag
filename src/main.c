@@ -8,6 +8,7 @@
 #include "cofyc/argparse.h"
 
 #include "util/config.h"
+#include "util/routing-table.h"
 #include "util/socket.h"
 
 static const char *const usage[] = {
@@ -25,6 +26,7 @@ int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
   struct epoll_event *epev;
   int epfd;
+  struct pmlag_bond *bond;
   struct pmlag_iface *iface;
 
   // Seed random
@@ -88,9 +90,24 @@ int main(int argc, const char **argv) {
       for( b = 0 ; b < config->bond_count ; b++ ) {
 
         // (re)open bond tap
+        bond = config->bond[b];
+        if (!bond->sockfd) {
+          bond->sockfd = tap_alloc(bond->name, bond->hwaddr);
+          if (bond->sockfd < 0) {
+            perror("tap_alloc");
+            bond->sockfd = 0;
+            continue;
+          }
+          printf("Opened tap for %s\n", bond->name);
+        }
+
+        // (re)initialize routing table
+        if (!bond->rt) {
+          bond->rt = rt_init(bond);
+        }
 
         for( i = 0 ; i < config->bond[b]->iface_count ; i++ ) {
-          iface = config->bond[b]->iface[i];
+          iface = bond->iface[i];
 
           // (re)open interface socket
           if (!iface->sockfd) {

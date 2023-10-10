@@ -1,39 +1,31 @@
-/* #include <linux/if_ether.h> */
+#include <linux/if_ether.h>
 /* #include <stdio.h> */
 /* #include <stdlib.h> */
-/* #include <string.h> */
+#include <string.h>
 
-/* #include "config.h" */
-/* #include "finwo/mindex.h" */
-/* #include "routing-table.h" */
+#include "finwo/mindex.h"
 
-/* static int rt_compare(const void *a, const void *b, void *udata) { */
-/*   struct pmlag_rt_entry *ta = (struct pmlag_rt_entry *)a; */
-/*   struct pmlag_rt_entry *tb = (struct pmlag_rt_entry *)b; */
-/*   int result; */
+#include "config.h"
+#include "routing-table.h"
 
-/*   // Same pointer = match */
-/*   if (a == b) return 0; */
+static int rt_compare(const void *a, const void *b, void *udata) {
+  struct pmlag_rt_entry *ta = (struct pmlag_rt_entry *)a;
+  struct pmlag_rt_entry *tb = (struct pmlag_rt_entry *)b;
+  if (a == b) return 0;
+  return memcmp(ta->mac, tb->mac, ETH_ALEN);
+}
 
-/*   // Check for ETH_ALEN, unrolled memcmp */
-/*   if (( result = ((int)ta->mac[0] - (int)tb->mac[0]) )) return result; */
-/*   if (( result = ((int)ta->mac[1] - (int)tb->mac[1]) )) return result; */
-/*   if (( result = ((int)ta->mac[2] - (int)tb->mac[2]) )) return result; */
-/*   if (( result = ((int)ta->mac[3] - (int)tb->mac[3]) )) return result; */
-/*   if (( result = ((int)ta->mac[4] - (int)tb->mac[4]) )) return result; */
-/*   return (int)ta->mac[5] - (int)tb->mac[5]; */
-/* } */
+static void rt_purge(void *item, void *udata) {
+  struct pmlag_rt_entry *rt_entry = (struct pmlag_rt_entry *)item;
+  if (!rt_entry) return;
+  if (rt_entry->iface) free(rt_entry->iface);
+  if (rt_entry->mac) free(rt_entry->mac);
+  free(rt_entry);
+}
 
-/* static void rt_purge(const void *item, void *udata) { */
-/*   struct pmlag_rt_entry *rt_entry = (struct pmlag_rt_entry *)item; */
-/*   free(rt_entry->interfaces); */
-/*   free(rt_entry->mac); */
-/*   free(rt_entry); */
-/* } */
-
-/* struct mindex_t * rt_init(void *udata) { */
-/*   return mindex_init(rt_compare, rt_purge, udata); */
-/* } */
+struct mindex_t * rt_init(void *udata) {
+  return mindex_init(rt_compare, rt_purge, udata);
+}
 
 /* int rt_upsert( */
 /*   struct mindex_t *rt, */

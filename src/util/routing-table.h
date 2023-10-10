@@ -1,18 +1,18 @@
-/* #ifndef __PMLAG_UTIL_RT_H__ */
-/* #define __PMLAG_UTIL_RT_H__ */
+#ifndef __PMLAG_UTIL_RT_H__
+#define __PMLAG_UTIL_RT_H__
 
-/* #include "config.h" */
+#include "config.h"
 
-/* #include "finwo/mindex.h" */
+#include "finwo/mindex.h"
 
-/* struct pmlag_rt_entry { */
-/*   unsigned char *mac;              // mac address of the remote entity */
-/*   int16_t bcidx;                   // broadcast index last seen from the mac */
-/*   int16_t iface_cnt;               // amount of interfaces this mac is available on */
-/*   struct pmlag_iface **interfaces; // list of pointers to interfaces */
-/* }; */
+struct pmlag_rt_entry {
+  unsigned char *mac;              // mac address of the remote entity
+  int16_t bcidx;                   // broadcast index last seen from the mac
+  struct pmlag_iface **iface;
+  int                  iface_count;
+};
 
-/* struct mindex_t * rt_init(void *udata); */
+struct mindex_t * rt_init(void *udata);
 
 /* int rt_upsert( */
 /*   struct mindex_t *rt, */
@@ -28,4 +28,4 @@
 /*   unsigned char *mac */
 /* ); */
 
-/* #endif // __PMLAG_UTIL_RT_H__ */
+#endif // __PMLAG_UTIL_RT_H__
