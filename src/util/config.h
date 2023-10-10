@@ -1,12 +1,17 @@
 #ifndef __PMLAG_UTIL_CONFIG_H__
 #define __PMLAG_UTIL_CONFIG_H__
 
+#define PMLAG_ENTITY_TYPE       int
+#define PMLAG_ENTITY_TYPE_IFACE 1
+#define PMLAG_ENTITY_TYPE_BOND  2
+
 struct pmlag_iface {
+  PMLAG_ENTITY_TYPE type;
   char *name;
   struct pmlag_bond *bond;
   int sockfd;
   struct epoll_event *epev;
-  /* /1* int   weight;            // weight of this interface within the bond *1/ */
+  /* /1* int   weight;        // weight of this interface within the bond *1/ */
   /* int   sockfd;            // file descriptor for the iface raw socket */
   /* int   ifidx;             // index of the interface within the socket */
   /* pthread_t tid;           // thread id where the iface listener recides in */
@@ -14,6 +19,7 @@ struct pmlag_iface {
 };
 
 struct pmlag_bond {
+  PMLAG_ENTITY_TYPE type;
   char *name;
   struct pmlag_iface **iface;
   int                  iface_count;

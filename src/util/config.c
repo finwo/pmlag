@@ -37,6 +37,7 @@ static int config_load_handler(
     config->bond[config->bond_count++] = bond = calloc(1, sizeof(struct pmlag_bond));
     config->bond                       = realloc(config->bond, (config->bond_count + 1) * sizeof(void*));
     config->bond[config->bond_count  ] = NULL;
+    bond->type                         = PMLAG_ENTITY_TYPE_BOND;
     bond->name                         = strdup(section);
   }
 
@@ -61,6 +62,7 @@ static int config_load_handler(
       bond->iface[bond->iface_count++] = iface = calloc(1, sizeof(struct pmlag_iface));
       bond->iface                      = realloc(bond->iface, (bond->iface_count + 1) * sizeof(void*));
       bond->iface[bond->iface_count  ] = NULL;
+      iface->type                      = PMLAG_ENTITY_TYPE_IFACE;
       iface->name                      = strdup(value);
       iface->bond                      = bond;
     }
