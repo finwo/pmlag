@@ -44,14 +44,10 @@ void handle_packet_bond(struct pmlag_bond *bond) {
     ? NULL
     : rt_find(bond->rt, rcvbuf);
 
-  // Prepare saddr_ll mac address
-  memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN);
-
   // Broadcast on ALL interfaces if no rt entry OR broadcast packet
   if (!iface) {
     for( i = 0 ; i < bond->iface_count ; i++ ) {
-      saddr_ll.sll_ifindex = bond->iface[i]->ifidx;
-      if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
+      if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, NULL, 0) != buflen) {
         perror("sendto");
       }
     }
@@ -59,8 +55,7 @@ void handle_packet_bond(struct pmlag_bond *bond) {
   }
 
   // Forward packet to iface as-is
-  saddr_ll.sll_ifindex = iface->ifidx;
-  if (sendto(iface->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
+  if (sendto(iface->sockfd, rcvbuf, buflen, 0, NULL, 0) != buflen) {
     perror("sendto");
   }
 }
