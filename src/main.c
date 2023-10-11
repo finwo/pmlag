@@ -35,9 +35,34 @@ int64_t millis() {
 }
 
 void handle_packet_bond(struct pmlag_bond *bond) {
-  int send_len, buflen;
+  int i, send_len, buflen;
+  struct sockaddr_ll saddr_ll;
   buflen = read(bond->sockfd, rcvbuf, RCVBUFSIZ);
-  printf("Got %d bytes on %s\n", buflen, bond->name);
+
+  // Get interface to send the packet from
+  struct pmlag_iface *iface = (memcmp(rcvbuf, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)
+    ? NULL
+    : rt_find(bond->rt, &(bond->mtx_rt), rcvbuf);
+
+  // Prepare saddr_ll mac address
+  memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN);
+
+  // Broadcast on ALL interfaces if no rt entry OR broadcast packet
+  if (!iface) {
+    for( i = 0 ; i < bond->iface_count ; i++ ) {
+      saddr_ll.sll_ifindex = bond->iface[i]->ifidx;
+      if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
+        perror("sendto");
+      }
+    }
+    return;
+  }
+
+  // Forward packet to iface as-is
+  saddr_ll.sll_ifindex = iface->ifidx;
+  if (sendto(iface->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
+    perror("sendto");
+  }
 }
 
 void handle_packet_iface(struct pmlag_iface *iface) {

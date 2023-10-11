@@ -80,23 +80,18 @@ int rt_upsert(
   return 0;
 }
 
-/* struct pmlag_iface * rt_find( */
-/*   struct mindex_t *rt, */
-/*   pthread_mutex_t *mtx, */
-/*   unsigned char *mac */
-/* ) { */
-/*   struct pmlag_rt_entry *rt_entry; */
+struct pmlag_iface * rt_find(
+  struct mindex_t *rt,
+  pthread_mutex_t *mtx,
+  unsigned char *mac
+) {
+  struct pmlag_rt_entry *rt_entry;
 
-/*   // Attempt to fetch the rt entry */
-/*   pthread_mutex_lock(mtx); */
-/*   rt_entry = mindex_get(rt, &((struct pmlag_rt_entry){ .mac = mac })); */
-/*   if (!rt_entry) { */
-/*     pthread_mutex_unlock(mtx); */
-/*     return NULL; */
-/*   } */
+  // Attempt to fetch the rt entry
+  rt_entry = mindex_get(rt, &((struct pmlag_rt_entry){ .mac = mac }));
+  if (!rt_entry) return NULL;
 
-/*   // Unlock the routing table again */
-/*   struct pmlag_iface *iface = rt_entry->interfaces[rand() % rt_entry->iface_cnt]; */
-/*   pthread_mutex_unlock(mtx); */
-/*   return iface; */
-/* } */
+  // Unlock the routing table again
+  struct pmlag_iface *iface = rt_entry->interfaces[rand() % rt_entry->iface_cnt];
+  return iface;
+}
