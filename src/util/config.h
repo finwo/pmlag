@@ -22,6 +22,7 @@ struct pmlag_iface {
 struct pmlag_bond {
   PMLAG_ENTITY_TYPE    type;
   char                *name;
+  struct epoll_event  *epev;
   PMLAG_STATE          state;
   int                  bc_timer;
   uint16_t             bc_id;

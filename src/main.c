@@ -36,7 +36,6 @@ int64_t millis() {
 
 void handle_packet_bond(struct pmlag_bond *bond) {
   int i, buflen;
-  struct sockaddr_ll saddr_ll;
   buflen = read(bond->sockfd, rcvbuf, RCVBUFSIZ);
 
   // Get interface to send the packet from
@@ -248,7 +247,21 @@ int main(int argc, const char **argv) {
             bond->sockfd = 0;
             continue;
           }
-          /* printf("Opened tap for %s\n", bond->name); */
+          bond->epev = calloc(1, sizeof(struct epoll_event));
+          if (!bond->epev) {
+            perror("calloc");
+            bond->epev = NULL;
+            continue;
+          }
+          bond->epev->events   = EPOLLIN;
+          bond->epev->data.ptr = bond;
+          if (epoll_ctl(epfd, EPOLL_CTL_ADD, bond->sockfd, bond->epev)) {
+            free(bond->epev);
+            close(bond->sockfd);
+            bond->sockfd = 0;
+            bond->epev   = NULL;
+            continue;
+          }
         }
 
         // (re)initialize routing table
