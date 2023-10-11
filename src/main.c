@@ -35,14 +35,14 @@ int64_t millis() {
 }
 
 void handle_packet_bond(struct pmlag_bond *bond) {
-  int i, send_len, buflen;
+  int i, buflen;
   struct sockaddr_ll saddr_ll;
   buflen = read(bond->sockfd, rcvbuf, RCVBUFSIZ);
 
   // Get interface to send the packet from
   struct pmlag_iface *iface = (memcmp(rcvbuf, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)
     ? NULL
-    : rt_find(bond->rt, &(bond->mtx_rt), rcvbuf);
+    : rt_find(bond->rt, rcvbuf);
 
   // Prepare saddr_ll mac address
   memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN);
@@ -97,7 +97,7 @@ void handle_packet_iface(struct pmlag_iface *iface) {
   memcpy(&ethtype, rcvbuf + (2*ETH_ALEN), sizeof(ethtype));
   ethtype = ntohs(ethtype);
 
-  printf("Read %d bytes (%d)  --  rt = %d\n", buflen, ethtype, bond->rt->length);
+  printf("Read %d bytes (%d)  --  rt = %ld\n", buflen, ethtype, bond->rt->length);
 
   // Don't touch packets that don't use our described protocol
   if (ethtype != 0x0666) {
@@ -169,7 +169,6 @@ void handle_packet(void *entity) {
 
 int main(int argc, const char **argv) {
   char *config_file="/etc/pmlag/pmlag.ini";
-  struct epoll_event *epev;
   int epfd;
   struct pmlag_bond *bond;
   struct pmlag_iface *iface;

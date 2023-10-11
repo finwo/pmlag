@@ -82,7 +82,6 @@ int rt_upsert(
 
 struct pmlag_iface * rt_find(
   struct mindex_t *rt,
-  pthread_mutex_t *mtx,
   unsigned char *mac
 ) {
   struct pmlag_rt_entry *rt_entry;
@@ -92,6 +91,6 @@ struct pmlag_iface * rt_find(
   if (!rt_entry) return NULL;
 
   // Unlock the routing table again
-  struct pmlag_iface *iface = rt_entry->interfaces[rand() % rt_entry->iface_cnt];
+  struct pmlag_iface *iface = rt_entry->iface[rand() % rt_entry->iface_count];
   return iface;
 }
