@@ -16,8 +16,8 @@ static int config_load_handler(
 ) {
   struct pmlag_bond  *bond  = NULL;
   struct pmlag_iface *iface = NULL;
-  int bond_idx = 0;
-  int iface_idx = 0;
+  int bond_index = 0;
+  int iface_index = 0;
   struct pmlag_configuration* config = (struct pmlag_configuration *) user;
   printf("[%s].%s: %s\n", section, name, value);
 
@@ -25,9 +25,9 @@ static int config_load_handler(
   if (!config->bond) config->bond = calloc(1, sizeof(void*));
 
   // Find the bond being configured
-  for( bond_idx = 0 ; bond_idx < config->bond_count ; bond_idx ++ ) {
-    if (!strcmp(config->bond[bond_idx]->name, section)) {
-      bond = config->bond[bond_idx];
+  for( bond_index = 0 ; bond_index < config->bond_count ; bond_index ++ ) {
+    if (!strcmp(config->bond[bond_index]->name, section)) {
+      bond = config->bond[bond_index];
       break;
     }
   }
@@ -50,9 +50,9 @@ static int config_load_handler(
     if (!bond->iface) bond->iface = calloc(1, sizeof(void*));
 
     // Find the interface you're referencing
-    for( iface_idx = 0 ; iface_idx < bond->iface_count ; iface_idx ++ ) {
-      if (!strcmp(config->bond[bond_idx]->iface[iface_idx]->name, value)) {
-        iface = config->bond[bond_idx]->iface[iface_idx];
+    for( iface_index = 0 ; iface_index < bond->iface_count ; iface_index ++ ) {
+      if (!strcmp(config->bond[bond_index]->iface[iface_index]->name, value)) {
+        iface = config->bond[bond_index]->iface[iface_index];
         break;
       }
     }
@@ -70,22 +70,11 @@ static int config_load_handler(
   } else if (!strcmp(name, "hwaddr")) {
 
     // Find the interface you're referencing
-    for( iface_idx = 0 ; iface_idx < bond->iface_count ; iface_idx ++ ) {
-      if (!strcmp(config->bond[bond_idx]->iface[iface_idx]->name, value)) {
-        iface = config->bond[bond_idx]->iface[iface_idx];
+    for( iface_index = 0 ; iface_index < bond->iface_count ; iface_index ++ ) {
+      if (!strcmp(config->bond[bond_index]->iface[iface_index]->name, value)) {
+        iface = config->bond[bond_index]->iface[iface_index];
         break;
       }
-    }
-
-    if (bond->hwaddr) {
-      printf("Already had MAC: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
-        bond->hwaddr[0],
-        bond->hwaddr[1],
-        bond->hwaddr[2],
-        bond->hwaddr[3],
-        bond->hwaddr[4],
-        bond->hwaddr[5]
-      );
     }
 
     if (iface) {
@@ -111,7 +100,7 @@ static int config_load_handler(
     }
   }
 
-  return 1;
+  return 0;
 }
 
 struct pmlag_configuration * config_load(char * filepath, struct pmlag_configuration *config) {
