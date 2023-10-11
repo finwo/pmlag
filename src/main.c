@@ -17,12 +17,16 @@
 
 #define RCVBUFSIZ 131072
 
+#define TICK            100
+#define PMLAG_RT_FAST     4
+
+#define PMLAG_COMMAND_STREE_BROADCAST 0
+
 unsigned char *rcvbuf = NULL;
 static const char *const usage[] = {
   __NAME " [options]",
   NULL
 };
-
 
 int64_t millis() {
   struct timeval tv;
@@ -31,13 +35,19 @@ int64_t millis() {
 }
 
 void handle_packet_bond(struct pmlag_bond *bond) {
-  printf("Packet on bond %s\n", bond->name);
+  int send_len, buflen;
+  buflen = read(bond->sockfd, rcvbuf, RCVBUFSIZ);
+  printf("Got %d bytes on %s\n", buflen, bond->name);
 }
+
 void handle_packet_iface(struct pmlag_iface *iface) {
   printf("Packet on iface %s\n", iface->name);
-  int send_len, buflen;
+  struct pmlag_bond *bond = iface->bond;
+  struct pmlag_rt_entry *rt_entry;
+  int send_len, buflen, idx;
   uint16_t ethtype;
   uint16_t command;
+  uint16_t bcid;
 
   // Read the packet
   buflen = recvfrom(iface->sockfd, rcvbuf, RCVBUFSIZ, 0, NULL, 0);
@@ -50,13 +60,19 @@ void handle_packet_iface(struct pmlag_iface *iface) {
   // ethernet says minimum of 60, we just need 18
   if (buflen < 18) return;
 
-  // TODO: track all packets in routing table
+  // Always add mac to routing table
+  rt_upsert(
+    bond->rt,
+    iface,
+    rcvbuf + ETH_ALEN,
+    bond->bc_id
+  );
 
   // Get the ethtype
   memcpy(&ethtype, rcvbuf + (2*ETH_ALEN), sizeof(ethtype));
   ethtype = ntohs(ethtype);
 
-  printf("Read %d bytes (%d)\n", buflen, ethtype);
+  printf("Read %d bytes (%d)  --  rt = %d\n", buflen, ethtype, bond->rt->length);
 
   // Don't touch packets that don't use our described protocol
   if (ethtype != 0x0666) {
@@ -77,26 +93,42 @@ void handle_packet_iface(struct pmlag_iface *iface) {
   memcpy(&command, rcvbuf + (2*ETH_ALEN) + sizeof(ethtype), sizeof(command));
   command = ntohs(command);
 
-  printf("TODO: do something with this %.2x:%.2x:%.2x:%.2x:%.2x:%.2x - %.4x - %.4x - %.4x\n",
-    rcvbuf[ 6],
-    rcvbuf[ 7],
-    rcvbuf[ 8],
-    rcvbuf[ 9],
-    rcvbuf[10],
-    rcvbuf[11],
-    (rcvbuf[12] << 8) + rcvbuf[13],
-    (rcvbuf[14] << 8) + rcvbuf[15],
-    iface->bond->bc_id
-  );
+  switch(command) {
+    case PMLAG_COMMAND_STREE_BROADCAST:
 
-  // TODO:
-  // - received untriggered bc with timer > 0: we're a follower now (timer=3)
-  // - received untriggered bc with timer <= 0: trigger + timer=rand(0/2)
-  // - received triggered bc: ignore
-  //  - if triggered but received new bc, untrigger
-  //  - if untriggered but received bc, set bc_timer to 0 or 1 (random)
-  // TODO: commit routing table upon broadcast id change
-  // a.k.a. cleanup old entries not seen since bcid - 2?
+      // Stop if we already triggered this round
+      if (bond->state & PMLAG_STATE_TRIGGERED) break;
+      bond->state |= PMLAG_STATE_TRIGGERED;
+
+      // Have the network fight for leader status
+      if (bond->bc_timer) {
+        // Demote to follower if we were waiting
+        bond->bc_timer = 3;
+      } else {
+        // Random between now leader and pensive
+        bond->bc_timer = (rand() % 2) * 2;
+      }
+
+      // Fetch the broadcast id
+      memcpy(&bcid, rcvbuf + (2*ETH_ALEN) + sizeof(ethtype) + sizeof(command), sizeof(bcid));
+      bcid = ntohs(bcid);
+      bond->bc_id = bcid;
+
+      // Remove old entries from routing table
+      for( idx = 0; idx < bond->rt->length ; idx++ ) {
+        rt_entry = bond->rt->items[idx];
+        if ((bcid - rt_entry->bcidx) > PMLAG_RT_FAST) {
+          mindex_delete(bond->rt, rt_entry); // rt_entry is now unsafe
+          continue;
+        }
+        // More things here?
+      }
+
+      break;
+    default:
+      // Unknown command
+      return;
+  }
 }
 
 void handle_packet(void *entity) {
@@ -180,8 +212,8 @@ int main(int argc, const char **argv) {
     // Calculate waiting time & periodic actions
     tdiff = ttime - millis();
     if (tdiff <= 0) {
-      ttime += 100;
-      tdiff += 100;
+      ttime += TICK;
+      tdiff += TICK;
 
       // Handle sockets
       for( b = 0 ; b < config->bond_count ; b++ ) {
@@ -191,7 +223,7 @@ int main(int argc, const char **argv) {
         if (!bond->sockfd) {
           bond->sockfd   = tap_alloc(bond->name, bond->hwaddr);
           bond->state    = 0;
-          bond->bc_timer = 3;
+          bond->bc_timer = 3; // set to 2 in combination with the decrement below
           if (bond->sockfd < 0) {
             perror("tap_alloc");
             bond->sockfd = 0;
@@ -254,8 +286,7 @@ int main(int argc, const char **argv) {
         if (bond->bc_timer < 0) {
           bond->bc_timer = 0;
 
-          // Increment broadcast id
-          bond->bc_id = ntohs(bond->bc_id);
+          // Increment broadcast id & prepare network orientation
           bond->bc_id++;
           bond->bc_id = htons(bond->bc_id);
 
@@ -266,6 +297,9 @@ int main(int argc, const char **argv) {
           memcpy(anc_buffer + (2*ETH_ALEN)                                     , &ethtype      , sizeof(ethtype));     // ethtype 0x0666
           memset(anc_buffer + (2*ETH_ALEN) + sizeof(ethtype)                   , 0x00          , sizeof(uint16_t));    // command (interface detection broadcast)
           memcpy(anc_buffer + (2*ETH_ALEN) + sizeof(ethtype) + sizeof(uint16_t), &(bond->bc_id), sizeof(bond->bc_id)); // broadcast id
+
+          // Revert bc_id to host-orientation
+          bond->bc_id = ntohs(bond->bc_id);
 
           // Send packet on all interfaces
           for( i=0; i < bond->iface_count ; i++ ) {
