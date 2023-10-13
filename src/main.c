@@ -116,10 +116,9 @@ void handle_packet_iface(struct pmlag_iface *iface) {
   memcpy(&ethtype, rcvbuf + (2*ETH_ALEN), sizeof(ethtype));
   ethtype = ntohs(ethtype);
 
-  printf("Read %d bytes (%d)  --  rt = %ld\n", buflen, ethtype, bond->rt->length);
-
   // Don't touch packets that don't use our described protocol
   if (ethtype != 0x0666) {
+    printf("Read %d bytes (%d)  --  rt = %ld\n", buflen, ethtype, bond->rt->length);
     send_len = write(iface->bond->sockfd, rcvbuf, buflen);
     if (send_len != buflen) {
       perror("write");
@@ -158,15 +157,24 @@ void handle_packet_iface(struct pmlag_iface *iface) {
       bcid = ntohs(bcid);
       bond->bc_id = bcid;
 
-      /* // Remove old entries from routing table */
-      /* for( idx = 0; idx < bond->rt->length ; idx++ ) { */
-      /*   rt_entry = bond->rt->items[idx]; */
-      /*   if ((bcid - rt_entry->bcidx) > PMLAG_RT_FAST) { */
-      /*     mindex_delete(bond->rt, rt_entry); // rt_entry is now unsafe */
-      /*     continue; */
-      /*   } */
-      /*   // More things here? */
-      /* } */
+      // Remove old entries from routing table
+      for( idx = 0; idx < bond->rt->length ; idx++ ) {
+        rt_entry = bond->rt->items[idx];
+        if ((bcid - rt_entry->bcidx) > PMLAG_RT_FAST) {
+          printf(
+            "Removing rt_entry for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
+            rt_entry->mac[0],
+            rt_entry->mac[1],
+            rt_entry->mac[2],
+            rt_entry->mac[3],
+            rt_entry->mac[4],
+            rt_entry->mac[5]
+          );
+          mindex_delete(bond->rt, rt_entry); // rt_entry is now unsafe
+          continue;
+        }
+        // More things here?
+      }
 
       break;
     default:
