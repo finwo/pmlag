@@ -218,7 +218,6 @@ int main(int argc, const char **argv) {
 
   // Prepare announce buffer
   uint16_t ethtype  = htons(0x0666);
-  struct sockaddr_ll saddr_ll;
   size_t anc_buflen = (ETH_ALEN*2) + sizeof(ethtype) + sizeof(uint16_t) + sizeof(uint16_t); // mac + ethertype + command + broadcast-index
   char *anc_buffer  = malloc(anc_buflen);
 
@@ -325,7 +324,6 @@ int main(int argc, const char **argv) {
           bond->bc_id = htons(bond->bc_id);
 
           // Prepare packet
-          memcpy(saddr_ll.sll_addr                                             , bond->hwaddr  , ETH_ALEN);
           memset(anc_buffer                                                    , 0xFF          , ETH_ALEN);            // Send to broadcast
           memcpy(anc_buffer + (1*ETH_ALEN)                                     , bond->hwaddr  , ETH_ALEN);            // From bond
           memcpy(anc_buffer + (2*ETH_ALEN)                                     , &ethtype      , sizeof(ethtype));     // ethtype 0x0666
@@ -338,8 +336,7 @@ int main(int argc, const char **argv) {
           // Send packet on all interfaces
           for( i=0; i < bond->iface_count ; i++ ) {
             iface = bond->iface[i];
-            saddr_ll.sll_ifindex = iface->ifidx;
-            if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) {
+            if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, NULL, 0) != anc_buflen) {
               perror("sendto");
               printf("Error during sendto on %d\n", __LINE__);
             }
