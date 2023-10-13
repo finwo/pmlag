@@ -52,7 +52,7 @@ void handle_packet_bond(struct pmlag_bond *bond) {
       rcvbuf[2],
       rcvbuf[3],
       rcvbuf[4],
-      rcvbuf[5],
+      rcvbuf[5]
     );
   } else {
     printf(
@@ -62,7 +62,7 @@ void handle_packet_bond(struct pmlag_bond *bond) {
       rcvbuf[2],
       rcvbuf[3],
       rcvbuf[4],
-      rcvbuf[5],
+      rcvbuf[5]
     );
   }
 
