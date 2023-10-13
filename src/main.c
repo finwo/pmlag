@@ -18,7 +18,7 @@
 #define RCVBUFSIZ 131072
 
 #define TICK            100
-#define PMLAG_RT_FAST     4
+#define PMLAG_RT_FAST    64
 
 #define PMLAG_COMMAND_STREE_BROADCAST 0
 
