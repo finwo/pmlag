@@ -85,7 +85,6 @@ void handle_packet_bond(struct pmlag_bond *bond) {
 }
 
 void handle_packet_iface(struct pmlag_iface *iface) {
-  printf("Packet on iface %s\n", iface->name);
   struct pmlag_bond *bond = iface->bond;
   struct pmlag_rt_entry *rt_entry;
   int send_len, buflen, idx;
