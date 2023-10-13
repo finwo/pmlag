@@ -43,6 +43,29 @@ void handle_packet_bond(struct pmlag_bond *bond) {
     ? NULL
     : rt_find(bond->rt, rcvbuf);
 
+  if (iface) {
+    printf(
+      "Sending to iface %s for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
+      iface->name,
+      rcvbuf[0],
+      rcvbuf[1],
+      rcvbuf[2],
+      rcvbuf[3],
+      rcvbuf[4],
+      rcvbuf[5],
+    );
+  } else {
+    printf(
+      "No iface for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
+      rcvbuf[0],
+      rcvbuf[1],
+      rcvbuf[2],
+      rcvbuf[3],
+      rcvbuf[4],
+      rcvbuf[5],
+    );
+  }
+
   // Broadcast on ALL interfaces if no rt entry OR broadcast packet
   if (!iface) {
     for( i = 0 ; i < bond->iface_count ; i++ ) {
