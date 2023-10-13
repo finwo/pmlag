@@ -44,48 +44,47 @@ void handle_packet_bond(struct pmlag_bond *bond) {
 
   buflen = read(bond->sockfd, rcvbuf, RCVBUFSIZ);
 
-  // Get interface to send the packet from
-  struct pmlag_iface *iface = (memcmp(rcvbuf, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0)
-    ? NULL
-    : rt_find(bond->rt, rcvbuf);
+  /* // Get interface to send the packet from */
+  /* struct pmlag_iface *iface = (memcmp(rcvbuf, "\xFF\xFF\xFF\xFF\xFF\xFF", ETH_ALEN) == 0) */
+  /*   ? NULL */
+  /*   : rt_find(bond->rt, rcvbuf); */
 
-  if (iface) {
-    printf(
-      "Sending to iface %s for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
-      iface->name,
-      rcvbuf[0],
-      rcvbuf[1],
-      rcvbuf[2],
-      rcvbuf[3],
-      rcvbuf[4],
-      rcvbuf[5]
-    );
-  } else {
-    printf(
-      "No iface for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
-      rcvbuf[0],
-      rcvbuf[1],
-      rcvbuf[2],
-      rcvbuf[3],
-      rcvbuf[4],
-      rcvbuf[5]
-    );
-  }
+  struct pmlag_iface *iface = bond->iface[0];
 
-            /* saddr_ll.sll_ifindex = iface->ifidx; */
-            /* if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) { */
+  /* if (iface) { */
+  /*   printf( */
+  /*     "Sending to iface %s for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", */
+  /*     iface->name, */
+  /*     rcvbuf[0], */
+  /*     rcvbuf[1], */
+  /*     rcvbuf[2], */
+  /*     rcvbuf[3], */
+  /*     rcvbuf[4], */
+  /*     rcvbuf[5] */
+  /*   ); */
+  /* } else { */
+  /*   printf( */
+  /*     "No iface for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", */
+  /*     rcvbuf[0], */
+  /*     rcvbuf[1], */
+  /*     rcvbuf[2], */
+  /*     rcvbuf[3], */
+  /*     rcvbuf[4], */
+  /*     rcvbuf[5] */
+  /*   ); */
+  /* } */
 
-  // Broadcast on ALL interfaces if no rt entry OR broadcast packet
-  if (!iface) {
-    for( i = 0 ; i < bond->iface_count ; i++ ) {
-      saddr_ll.sll_ifindex = bond->iface[i]->ifidx;
-      if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
-        perror("sendto");
-        printf("Error during sendto on %d\n", __LINE__);
-      }
-    }
-    return;
-  }
+  /* // Broadcast on ALL interfaces if no rt entry OR broadcast packet */
+  /* if (!iface) { */
+  /*   for( i = 0 ; i < bond->iface_count ; i++ ) { */
+  /*     saddr_ll.sll_ifindex = bond->iface[i]->ifidx; */
+  /*     if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) { */
+  /*       perror("sendto"); */
+  /*       printf("Error during sendto on %d\n", __LINE__); */
+  /*     } */
+  /*   } */
+  /*   return; */
+  /* } */
 
   // Forward packet to iface as-is
   saddr_ll.sll_ifindex = iface->ifidx;
@@ -97,7 +96,7 @@ void handle_packet_bond(struct pmlag_bond *bond) {
 
 void handle_packet_iface(struct pmlag_iface *iface) {
   struct pmlag_bond *bond = iface->bond;
-  struct pmlag_rt_entry *rt_entry;
+  /* struct pmlag_rt_entry *rt_entry; */
   int send_len, buflen, idx;
   uint16_t ethtype;
   uint16_t command;
@@ -110,88 +109,92 @@ void handle_packet_iface(struct pmlag_iface *iface) {
     return;
   }
 
-  // Basic error checking
-  // ethernet says minimum of 60, we just need 18
-  if (buflen < 18) return;
+/*   // Basic error checking */
+/*   // ethernet says minimum of 60, we just need 18 */
+/*   if (buflen < 18) return; */
 
-  // Always add mac to routing table
-  rt_upsert(
-    bond->rt,
-    iface,
-    rcvbuf + ETH_ALEN,
-    bond->bc_id
-  );
+  /* // Always add mac to routing table */
+  /* rt_upsert( */
+  /*   bond->rt, */
+  /*   iface, */
+  /*   rcvbuf + ETH_ALEN, */
+  /*   bond->bc_id */
+  /* ); */
 
   // Get the ethtype
   memcpy(&ethtype, rcvbuf + (2*ETH_ALEN), sizeof(ethtype));
   ethtype = ntohs(ethtype);
 
+  if (ethtype == 0x0666) {
+    return;
+  }
+
   // Don't touch packets that don't use our described protocol
-  if (ethtype != 0x0666) {
-    printf("Read %d bytes (%d)  --  rt = %ld\n", buflen, ethtype, bond->rt->length);
+  /* if (ethtype != 0x0666) { */
+    /* printf("Read %d bytes (%d)  --  rt = %ld\n", buflen, ethtype, bond->rt->length); */
     send_len = write(iface->bond->sockfd, rcvbuf, buflen);
     if (send_len != buflen) {
       perror("write");
       return;
     }
     return;
-  }
+  /* } */
 
-  // Ignore our own packets (loop detected, may do something with it later)
-  if (!memcmp(rcvbuf + ETH_ALEN, iface->bond->hwaddr, ETH_ALEN)) {
-    printf("Loop detected\n");
-    return;
-  }
+  /* // Ignore our own packets (loop detected, may do something with it later) */
+  /* if (!memcmp(rcvbuf + ETH_ALEN, iface->bond->hwaddr, ETH_ALEN)) { */
+  /*   printf("Loop detected\n"); */
+  /*   return; */
+  /* } */
 
-  // Fetch the command that was called
-  memcpy(&command, rcvbuf + (2*ETH_ALEN) + sizeof(ethtype), sizeof(command));
-  command = ntohs(command);
+  /* // Fetch the command that was called */
+  /* memcpy(&command, rcvbuf + (2*ETH_ALEN) + sizeof(ethtype), sizeof(command)); */
+  /* command = ntohs(command); */
 
-  switch(command) {
-    case PMLAG_COMMAND_STREE_BROADCAST:
+  /* switch(command) { */
+  /*   case PMLAG_COMMAND_STREE_BROADCAST: */
 
-      // Stop if we already triggered this round
-      if (bond->state & PMLAG_STATE_TRIGGERED) break;
-      bond->state |= PMLAG_STATE_TRIGGERED;
+  /*     // Stop if we already triggered this round */
+  /*     if (bond->state & PMLAG_STATE_TRIGGERED) break; */
+  /*     bond->state |= PMLAG_STATE_TRIGGERED; */
 
-      // Have the network fight for leader status
-      if (bond->bc_timer) {
-        // Demote to follower if we were waiting
-        bond->bc_timer = 3;
-      } else {
-        // Random between now leader and pensive
-        bond->bc_timer = (rand() % 2) * 2;
-      }
+  /*     // Have the network fight for leader status */
+  /*     if (bond->bc_timer) { */
+  /*       // Demote to follower if we were waiting */
+  /*       bond->bc_timer = 3; */
+  /*     } else { */
+  /*       // Random between now leader and pensive */
+  /*       bond->bc_timer = (rand() % 2) * 2; */
+  /*     } */
 
-      // Fetch the broadcast id
-      memcpy(&bcid, rcvbuf + (2*ETH_ALEN) + sizeof(ethtype) + sizeof(command), sizeof(bcid));
-      bcid = ntohs(bcid);
-      bond->bc_id = bcid;
+  /*     // Fetch the broadcast id */
+  /*     memcpy(&bcid, rcvbuf + (2*ETH_ALEN) + sizeof(ethtype) + sizeof(command), sizeof(bcid)); */
+  /*     bcid = ntohs(bcid); */
+  /*     bond->bc_id = bcid; */
 
-      // Remove old entries from routing table
-      for( idx = 0; idx < bond->rt->length ; idx++ ) {
-        rt_entry = bond->rt->items[idx];
-        if ((bcid - rt_entry->bcidx) > PMLAG_RT_FAST) {
-          printf(
-            "Removing rt_entry for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
-            rt_entry->mac[0],
-            rt_entry->mac[1],
-            rt_entry->mac[2],
-            rt_entry->mac[3],
-            rt_entry->mac[4],
-            rt_entry->mac[5]
-          );
-          mindex_delete(bond->rt, rt_entry); // rt_entry is now unsafe
-          continue;
-        }
-        // More things here?
-      }
+  /*     // Remove old entries from routing table */
+  /*     for( idx = 0; idx < bond->rt->length ; idx++ ) { */
+  /*       rt_entry = bond->rt->items[idx]; */
+  /*       if ((bcid - rt_entry->bcidx) > PMLAG_RT_FAST) { */
+  /*         printf( */
+  /*           "Removing rt_entry for %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n", */
+  /*           rt_entry->mac[0], */
+  /*           rt_entry->mac[1], */
+  /*           rt_entry->mac[2], */
+  /*           rt_entry->mac[3], */
+  /*           rt_entry->mac[4], */
+  /*           rt_entry->mac[5] */
+  /*         ); */
+  /*         mindex_delete(bond->rt, rt_entry); // rt_entry is now unsafe */
+  /*         continue; */
+  /*       } */
+  /*       // More things here? */
+  /*     } */
 
-      break;
-    default:
-      // Unknown command
-      return;
-  }
+  /*     break; */
+  /*   default: */
+  /*     // Unknown command */
+  /*     return; */
+  /* } */
 }
 
 void handle_packet(void *entity) {
@@ -359,36 +362,36 @@ int main(int argc, const char **argv) {
           }
         }
 
-        // Handle broadcasts
-        if (bond->bc_timer < 0) {
-          bond->bc_timer = 0;
+        /* // Handle broadcasts */
+        /* if (bond->bc_timer < 0) { */
+        /*   bond->bc_timer = 0; */
 
-          // Increment broadcast id & prepare network orientation
-          bond->bc_id++;
-          bond->bc_id = htons(bond->bc_id);
+        /*   // Increment broadcast id & prepare network orientation */
+        /*   bond->bc_id++; */
+        /*   bond->bc_id = htons(bond->bc_id); */
 
-          // Prepare packet
-          memset(anc_buffer                                                    , 0xFF          , ETH_ALEN);            // Send to broadcast
-          memcpy(anc_buffer + (1*ETH_ALEN)                                     , bond->hwaddr  , ETH_ALEN);            // From bond
-          memcpy(anc_buffer + (2*ETH_ALEN)                                     , &ethtype      , sizeof(ethtype));     // ethtype 0x0666
-          memset(anc_buffer + (2*ETH_ALEN) + sizeof(ethtype)                   , 0x00          , sizeof(uint16_t));    // command (interface detection broadcast)
-          memcpy(anc_buffer + (2*ETH_ALEN) + sizeof(ethtype) + sizeof(uint16_t), &(bond->bc_id), sizeof(bond->bc_id)); // broadcast id
+        /*   // Prepare packet */
+        /*   memset(anc_buffer                                                    , 0xFF          , ETH_ALEN);            // Send to broadcast */
+        /*   memcpy(anc_buffer + (1*ETH_ALEN)                                     , bond->hwaddr  , ETH_ALEN);            // From bond */
+        /*   memcpy(anc_buffer + (2*ETH_ALEN)                                     , &ethtype      , sizeof(ethtype));     // ethtype 0x0666 */
+        /*   memset(anc_buffer + (2*ETH_ALEN) + sizeof(ethtype)                   , 0x00          , sizeof(uint16_t));    // command (interface detection broadcast) */
+        /*   memcpy(anc_buffer + (2*ETH_ALEN) + sizeof(ethtype) + sizeof(uint16_t), &(bond->bc_id), sizeof(bond->bc_id)); // broadcast id */
 
-          // Revert bc_id to host-orientation
-          bond->bc_id = ntohs(bond->bc_id);
+        /*   // Revert bc_id to host-orientation */
+        /*   bond->bc_id = ntohs(bond->bc_id); */
 
-          // Send packet on all interfaces
-          memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN);
-          for( i=0; i < bond->iface_count ; i++ ) {
-            iface = bond->iface[i];
-            saddr_ll.sll_ifindex = iface->ifidx;
-            if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) {
-              perror("sendto");
-              printf("Error during sendto on %d\n", __LINE__);
-            }
-          }
+        /*   // Send packet on all interfaces */
+        /*   memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN); */
+        /*   for( i=0; i < bond->iface_count ; i++ ) { */
+        /*     iface = bond->iface[i]; */
+        /*     saddr_ll.sll_ifindex = iface->ifidx; */
+        /*     if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) { */
+        /*       perror("sendto"); */
+        /*       printf("Error during sendto on %d\n", __LINE__); */
+        /*     } */
+        /*   } */
 
-        }
+        /* } */
       }
     }
 
