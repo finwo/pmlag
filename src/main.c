@@ -156,7 +156,7 @@ void handle_packet(void *entity) {
   if (iface->type == PMLAG_ENTITY_TYPE_IFACE) {
     return handle_packet_iface(iface);
   }
-  if (bond->type == PMLAG_ENTITY_TYPE_IFACE) {
+  if (bond->type == PMLAG_ENTITY_TYPE_BOND) {
     return handle_packet_bond(bond);
   }
 }
