@@ -48,6 +48,7 @@ void handle_packet_bond(struct pmlag_bond *bond) {
     for( i = 0 ; i < bond->iface_count ; i++ ) {
       if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, NULL, 0) != buflen) {
         perror("sendto");
+        printf("Error during sendto on %d\n", __LINE__);
       }
     }
     return;
@@ -56,6 +57,7 @@ void handle_packet_bond(struct pmlag_bond *bond) {
   // Forward packet to iface as-is
   if (sendto(iface->sockfd, rcvbuf, buflen, 0, NULL, 0) != buflen) {
     perror("sendto");
+    printf("Error during sendto on %d\n", __LINE__);
   }
 }
 
@@ -339,6 +341,7 @@ int main(int argc, const char **argv) {
             saddr_ll.sll_ifindex = iface->ifidx;
             if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) {
               perror("sendto");
+              printf("Error during sendto on %d\n", __LINE__);
             }
           }
 
