@@ -123,6 +123,7 @@ void handle_packet_iface(struct pmlag_iface *iface) {
       perror("write");
       return;
     }
+    return;
   }
 
   // Ignore our own packets (loop detected, may do something with it later)
