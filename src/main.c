@@ -35,7 +35,13 @@ int64_t millis() {
 }
 
 void handle_packet_bond(struct pmlag_bond *bond) {
+  struct sockaddr_ll saddr_ll;
   int i, buflen;
+
+  // Prepare sending filter
+  saddr_ll.sll_halen = ETH_ALEN;
+  memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN);
+
   buflen = read(bond->sockfd, rcvbuf, RCVBUFSIZ);
 
   // Get interface to send the packet from
@@ -66,10 +72,14 @@ void handle_packet_bond(struct pmlag_bond *bond) {
     );
   }
 
+            /* saddr_ll.sll_ifindex = iface->ifidx; */
+            /* if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) { */
+
   // Broadcast on ALL interfaces if no rt entry OR broadcast packet
   if (!iface) {
     for( i = 0 ; i < bond->iface_count ; i++ ) {
-      if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, NULL, 0) != buflen) {
+      saddr_ll.sll_ifindex = bond->iface[i]->ifidx;
+      if (sendto(bond->iface[i]->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
         perror("sendto");
         printf("Error during sendto on %d\n", __LINE__);
       }
@@ -78,7 +88,8 @@ void handle_packet_bond(struct pmlag_bond *bond) {
   }
 
   // Forward packet to iface as-is
-  if (sendto(iface->sockfd, rcvbuf, buflen, 0, NULL, 0) != buflen) {
+  saddr_ll.sll_ifindex = iface->ifidx;
+  if (sendto(iface->sockfd, rcvbuf, buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != buflen) {
     perror("sendto");
     printf("Error during sendto on %d\n", __LINE__);
   }
@@ -199,6 +210,8 @@ int main(int argc, const char **argv) {
   int epfd;
   struct pmlag_bond *bond;
   struct pmlag_iface *iface;
+  struct sockaddr_ll saddr_ll;
+  saddr_ll.sll_halen = ETH_ALEN;
 
   // Seed random
   uint32_t seed;
@@ -365,9 +378,11 @@ int main(int argc, const char **argv) {
           bond->bc_id = ntohs(bond->bc_id);
 
           // Send packet on all interfaces
+          memcpy(saddr_ll.sll_addr, bond->hwaddr, ETH_ALEN);
           for( i=0; i < bond->iface_count ; i++ ) {
             iface = bond->iface[i];
-            if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, NULL, 0) != anc_buflen) {
+            saddr_ll.sll_ifindex = iface->ifidx;
+            if (sendto(iface->sockfd, anc_buffer, anc_buflen, 0, (const struct sockaddr*)&saddr_ll, sizeof(struct sockaddr_ll)) != anc_buflen) {
               perror("sendto");
               printf("Error during sendto on %d\n", __LINE__);
             }
