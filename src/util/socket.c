@@ -108,7 +108,7 @@ int tap_alloc(char * ifname, unsigned char * mac) {
 
   // Bring up the interface
   memset(&ifr, 0, sizeof(ifr));
-  ifr.ifr_flags = IFF_TAP | IFF_MULTI_QUEUE | IFF_NO_PI;
+  ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
   if( *ifname ) {
     strncpy(ifr.ifr_name, ifname, IFNAMSIZ);
   }
