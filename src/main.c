@@ -11,7 +11,10 @@ extern "C" {
 
 #include "cofyc/argparse.h"
 
-#include "util/config-root.h"
+#include "util/config.h"
+
+#include "daemon/bond/setup.h"
+#include "daemon/router/setup.h"
 
 static const char *const usage[] = {
   __NAME " [options]",
@@ -36,6 +39,10 @@ int main(int argc, const char **argv) {
     OPT_STRING('c', "config", &config_file, "Config file to use", NULL, 0, 0),
     OPT_END(),
   };
+
+  // Initialize components
+  daemon_bond_setup();
+  daemon_router_setup();
 
   // Parse command line arguments
   struct argparse argparse;

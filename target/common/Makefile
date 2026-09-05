@@ -6,6 +6,7 @@ TARGET?=
 SRC:=
 SRC+=$(wildcard src/*.c)
 SRC+=$(wildcard src/*/*.c)
+SRC+=$(wildcard src/*/*/*.c)
 
 CFLAGS?=-Wall -s -O2
 

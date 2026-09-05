@@ -1,5 +1,5 @@
-#ifndef __PMLAG_UTIL_CONFIG_ROOT_H__
-#define __PMLAG_UTIL_CONFIG_ROOT_H__
+#ifndef __PMLAG_UTIL_CONFIG_H__
+#define __PMLAG_UTIL_CONFIG_H__
 
 #include <stdio.h>
 
@@ -12,4 +12,4 @@ typedef struct cnf_directive * (*cfg_directive_fn)(FILE *fd, struct cnf_directiv
 void cfg_register_directive(const char *name, cfg_directive_fn fn);
 int cfg_parse(const char *wd, FILE *fd, void *user);
 
-#endif // __PMLAG_UTIL_CONFIG_ROOT_H__
+#endif // __PMLAG_UTIL_CONFIG_H__

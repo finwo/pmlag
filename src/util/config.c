@@ -5,7 +5,7 @@
 #include <strings.h>
 #include <unistd.h>
 
-#include "config-root.h"
+#include "config.h"
 
 #define CFG_MAX_REG 256
 
@@ -70,17 +70,18 @@ cfg_parse_reparse:
       if (!strcasecmp(handler_name[i], dir->name)) {
         dir = handler_fn[i](fd, dir, user);
         if (dir) goto cfg_parse_reparse;
-        goto cfg_parse_cleanup;
+        break;
       }
     }
 
-    // Here = not found
-    fprintf(stderr, "Unknown directive: %s\n", dir->name);
-    return CFG_RET_ERROR;
+    if (i == handler_count) {
+      // Here = not found
+      fprintf(stderr, "Unknown directive: %s\n", dir->name);
+      return CFG_RET_ERROR;
+    }
   }
 
   // Cleanup here
-cfg_parse_cleanup:
   if (dir) cnf_directive_free(dir);
 
   return CFG_RET_OK;
